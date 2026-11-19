@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es" data-type="software" data-site-kind="software">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#090b12" />
+  <meta name="description" content="Huellas Espaciales, una casa 3D para guardar memoria afectiva." />
+  <meta name="page-type" content="software" />
+  <meta name="site-kind" content="software" />
+  <title>Huellas Espaciales · Archivo afectivo 2076</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <main id="app">
+    <canvas id="house-canvas" aria-label="Casa tridimensional navegable"></canvas>
+
+    <section class="intro glass" id="intro" aria-labelledby="intro-title">
+      <p class="eyebrow">ARCHIVO AFECTIVO // 2076</p>
+      <h1 id="intro-title">Huellas <em>Espaciales</em></h1>
+      <p class="intro-subtitle">La casa donde habitan las emociones</p>
+      <p class="intro-copy">Afuera, los algoritmos aprendieron a adormecerlo todo. Aquí los cuartos todavía guardan una canción, un pensamiento y el rastro de quienes eligieron sentir.</p>
+      <button id="enter-house" class="primary">Entrar a la casa <span aria-hidden="true">↗</span></button>
+      <p class="quiet-note">Sin likes · sin seguidores · sin métricas</p>
+    </section>
+
+    <div id="hud" class="hud hidden">
+      <section class="status glass" aria-live="polite">
+        <p id="footprint-count">0 huellas en la casa</p>
+        <p id="current-room">Estás en: El Recibidor</p>
+        <p class="mood"><span id="mood-dot"></span><span id="dominant-emotion">Calma</span> predomina</p>
+      </section>
+      <nav class="floor-switcher glass" aria-label="Selector rápido de pisos">
+        <button data-floor="2">Nivel 3 <span>· Terraza</span></button>
+        <button data-floor="1">Nivel 2 <span>· Cuartos</span></button>
+        <button data-floor="0" class="active">Nivel 1 <span>· Planta Baja</span></button>
+      </nav>
+      <p class="controls glass">WASD / Flechas: Caminar <i>·</i> Escaleras o botones: Subir/Bajar piso <i>·</i> Mouse: Rotar vista y hacer clic</p>
+      <button id="place-memory" class="place-button hidden">+ Depositar una huella en este cuarto</button>
+    </div>
+
+    <section id="memory-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="memory-title">
+      <form class="modal glass" id="memory-form">
+        <button type="button" class="close" data-close="memory-modal" aria-label="Cerrar formulario">×</button>
+        <p class="eyebrow">NUEVA HUELLA</p>
+        <h2 id="memory-title">Guardar memoria</h2>
+        <p id="memory-location" class="location-line"></p>
+        <fieldset>
+          <legend>¿Qué emoción queda aquí?</legend>
+          <div class="emotion-options" id="emotion-options"></div>
+        </fieldset>
+        <label for="memory-text">Pensamiento <span id="character-count">0 / 220</span></label>
+        <textarea id="memory-text" maxlength="220" required placeholder="Escribe lo que este lugar todavía te hace sentir…"></textarea>
+        <section class="youtube-search" aria-labelledby="youtube-title">
+          <div class="search-heading"><h3 id="youtube-title">Una canción de YouTube</h3><span>opcional</span></div>
+          <label class="sr-only" for="youtube-query">Buscar en YouTube o pegar un enlace</label>
+          <div class="search-row"><input id="youtube-query" autocomplete="off" placeholder="Buscar o pegar enlace de YouTube" /><button type="button" id="youtube-search-button">Buscar</button></div>
+          <div id="youtube-results" class="youtube-results" aria-live="polite"></div>
+          <input type="hidden" id="youtube-id" /><input type="hidden" id="youtube-title-input" />
+        </section>
+        <button class="primary submit-memory" type="submit">Guardar esta huella</button>
+      </form>
+    </section>
+
+    <section id="memory-card" class="memory-card glass hidden" aria-live="polite">
+      <button type="button" class="close" data-close="memory-card" aria-label="Cerrar memoria">×</button>
+      <p class="eyebrow" id="card-emotion"></p>
+      <h2 id="card-room"></h2>
+      <p id="card-time" class="card-meta"></p>
+      <p id="card-text" class="card-text"></p>
+      <div id="youtube-player" class="youtube-player"></div>
+    </section>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
