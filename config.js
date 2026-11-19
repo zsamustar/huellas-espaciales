@@ -11,4 +11,4 @@ export const FIREBASE_CONFIG = {
 
 // Opcional: habilita el buscador oficial de YouTube Data API v3.
 // Sin clave la búsqueda usa el catálogo local y acepta enlaces de YouTube pegados.
-export const YOUTUBE_API_KEY = '';
+export const YOUTUBE_API_KEY = 'AIzaSyB3hFL-b_U02wxXaB57T6D8DQe-_PSkv_8';
