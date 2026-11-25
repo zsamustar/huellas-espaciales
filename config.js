@@ -7,11 +7,11 @@ const CONFIG = {
   version: 3,
   youtubeApiKey: "AIzaSyAFjP0M7vGv8q9cNrOGJwHW09hP-maYSKM",
   claves: {
-    huellas: "huellas2050_huellas_v3",
-    escuchadas: "huellas2050_escuchadas_v3",
-    resonancias: "huellas2050_resonancias_v3",
-    progreso: "huellas2050_progreso_v3",
-    ajustes: "huellas2050_ajustes_v3"
+    huellas: "huellas2050_huellas_v4",
+    escuchadas: "huellas2050_escuchadas_v4",
+    resonancias: "huellas2050_resonancias_v4",
+    progreso: "huellas2050_progreso_v4",
+    ajustes: "huellas2050_ajustes_v4"
   },
 
   emociones: {
@@ -49,83 +49,93 @@ const CONFIG = {
   huellasIniciales: [
     {
       id: "h-001", emocion: "despedida", autor: "Inés, 24", fecha: "Marzo 2050",
+      lugar: "Carta en el banco de roble", objeto: "banco_carta",
       titulo: "Borré su chat, pero no a ella",
-      texto: "Llevaba un año releyendo nuestras conversaciones cada noche. Hoy vine aquí, me senté en la hierba y la recordé sin pantalla de por medio. Dolió menos de lo que pensaba.",
+      texto: "Llevaba un año releyendo nuestras conversaciones cada noche. Hoy vine aquí, me senté en la madera tibia y la recordé sin pantalla de por medio. Dolió menos de lo que pensaba.",
       pregunta: "¿Sentiste el peso de soltar a alguien que aún sigue en tus pensamientos?",
       youtubeId: "eIKhtQkjS1g", cancion: "Nsqk — Si En Tu Mente Estuve",
-      pos: { x: -4, y: 1.7, z: -12 }
+      pos: { x: 4.4, y: 0, z: -13.0 }
     },
     {
       id: "h-002", emocion: "alivio", autor: "Tomás y Leo", fecha: "Julio 2050",
+      lugar: "Nenúfares en la orilla", objeto: "estanque_nenufar",
       titulo: "Nos reímos hasta llorar",
-      texto: "Diez años hablando solo por audios. Hoy nos vimos aquí sin avisar a nadie, sin subir nada. Leo se tropezó con un banco y no paramos de reír en media hora.",
+      texto: "Diez años hablando solo por audios. Hoy nos vimos aquí sin avisar a nadie, sin subir nada. Leo se tropezó con una rama y no paramos de reír en media hora.",
       pregunta: "¿Sentiste esa risa limpia y cómplice que solo surge cuando no hay pantallas delante?",
       youtubeId: "Cq0jaj-eocI", cancion: "CA7RIEL & Paco Amoroso — EL DÍA DEL AMIGO",
-      pos: { x: 6, y: 1.5, z: -17 }
+      pos: { x: 4.8, y: 0, z: -22.5 }
     },
     {
       id: "h-003", emocion: "quiebre", autor: "Anónimo", fecha: "Enero 2050",
+      lugar: "Nota bajo el gran roble", objeto: "roble_nota",
       titulo: "Me di cuenta de lo lejos que estaba",
-      texto: "Tenía a todo el mundo a un toque de distancia y a nadie cerca. Junto al estanque entendí que llevaba meses sin mirar a nadie a los ojos.",
+      texto: "Tenía a todo el mundo a un toque de distancia y a nadie cerca. Junto a este tronco entendí que llevaba meses sin mirar a nadie a los ojos.",
       pregunta: "¿Sentiste ese vacío inquietante de estar hiperconectado pero a solas?",
       youtubeId: "00Kf5DBH6Eg", cancion: "Nsqk — ¿Qué Tan Cerca Es Cerca?",
-      pos: { x: 9, y: 2.1, z: -21 }
+      pos: { x: -6.8, y: 0, z: -16.5 }
     },
     {
       id: "h-004", emocion: "esperanza", autor: "Mara, 31", fecha: "Abril 2050",
+      lugar: "Sobre en la piedra del sendero", objeto: "sobre_sendero",
       titulo: "Lo que dejo cuando me vaya",
       texto: "Pensé que si desaparecía de las redes desaparecía de verdad. Resulta que no. Mi hermana me escribió una carta. En papel. Aún existo.",
       pregunta: "¿Sentiste la calidez de saber que importas más allá de una notificación?",
       youtubeId: "Sv9I9v1GlhI", cancion: "Nsqk — Cuando Me Vaya",
-      pos: { x: -15, y: 1.9, z: -24 }
+      pos: { x: -1.8, y: 0, z: -24.5 }
     },
     {
       id: "h-005", emocion: "gratitud", autor: "Julia", fecha: "Agosto 2050",
+      lugar: "Cuaderno en el banco sombreado", objeto: "banco_cuaderno",
       titulo: "Un domingo cualquiera",
-      texto: "Nadie me pidió nada en todo el día. Comí fruta bajo un árbol, me quedé dormida y al despertar había un perro desconocido apoyado en mí. Gracias, perro.",
+      texto: "Nadie me pidió nada en todo el día. Comí fruta en este banco, me quedé dormida y al despertar había un perro desconocido apoyado en mí. Gracias, perro.",
       pregunta: "¿Sentiste gratitud por esos pequeños instantes donde nadie espera nada de ti?",
       youtubeId: "yrgTEtyRE8M", cancion: "rusowsky — malibU",
-      pos: { x: -5, y: 1.6, z: -35 }
+      pos: { x: -8.2, y: 0, z: -30.0 }
     },
     {
       id: "h-006", emocion: "quiebre", autor: "Dani, 19", fecha: "Febrero 2050",
+      lugar: "Hojas sobre piedras con rocío", objeto: "piedras_hojas",
       titulo: "Llorar no era un fallo del sistema",
       texto: "Me enseñaron a optimizarlo todo, también lo que sentía. Aquí lloré por primera vez en dos años y no pasó nada malo. Solo llovió un poco por dentro.",
       pregunta: "¿Sentiste el desahogo de permitirte romper sin tener que arreglarte al instante?",
       youtubeId: "tVvZcVfE5KM", cancion: "Nsqk — SANGRE !",
-      pos: { x: 3, y: 2.3, z: -46 }
+      pos: { x: -11.5, y: 0, z: -22.0 }
     },
     {
       id: "h-007", emocion: "alivio", autor: "Papá de Nico", fecha: "Mayo 2050",
+      lugar: "Farol en el muelle de madera", objeto: "muelle_farol",
       titulo: "Ser buena persona sin que nadie lo vea",
-      texto: "Ayudé a un señor a cruzar el puente del estanque. No hubo vídeo, no hubo likes. Solo un 'gracias, hijo'. Fue lo mejor de la semana.",
+      texto: "Ayudé a un señor a no resbalar junto a la orilla. No hubo vídeo, no hubo likes. Solo un 'gracias, hijo'. Fue lo mejor de la semana.",
       pregunta: "¿Sentiste el alivio genuino de hacer algo bueno solo por el hecho de hacerlo?",
       youtubeId: "d2QMdIuk7Xk", cancion: "Nsqk — Hombre De Bien",
-      pos: { x: 27, y: 1.8, z: -37 }
+      pos: { x: 5.5, y: 0, z: -30.5 }
     },
     {
       id: "h-008", emocion: "gratitud", autor: "La banda del barrio", fecha: "Junio 2050",
+      lugar: "Altavoz viejo sobre el tocón", objeto: "tocon_altavoz",
       titulo: "Bailamos sin grabarlo",
-      texto: "Alguien trajo un altavoz viejo. Bailamos todos, mal, muy mal. Nadie sacó el móvil porque estaban en la caja de la entrada. Fue perfecto.",
+      texto: "Alguien trajo un altavoz viejo. Bailamos todos, mal, muy mal. Nadie sacó el móvil porque quedó en el pedestal de la entrada. Fue perfecto.",
       pregunta: "¿Sentiste esa felicidad libre de disfrutar el presente sin buscar la toma perfecta?",
       youtubeId: "9kqnsoY94L8", cancion: "CA7RIEL & Paco Amoroso — Tiny Desk",
-      pos: { x: -23, y: 1.6, z: -41 }
+      pos: { x: 3.5, y: 0, z: -39.5 }
     },
     {
       id: "h-009", emocion: "esperanza", autor: "Sofi", fecha: "Septiembre 2050",
+      lugar: "Barquito de papel en el agua", objeto: "barco_papel",
       titulo: "Empezar pequeñito",
       texto: "No voy a cambiar mi vida entera de golpe. Hoy solo vine. Mañana quizá llame a mi abuela. Pasito a pasito, pikito a pikito.",
       pregunta: "¿Sentiste que dar un paso minúsculo hoy ya es suficiente para empezar a sanar?",
       youtubeId: "DPqULcZXuGE", cancion: "rusowsky — pikito",
-      pos: { x: 15, y: 2.0, z: -50 }
+      pos: { x: 7.5, y: 0, z: -34.2 }
     },
     {
       id: "h-010", emocion: "despedida", autor: "R.", fecha: "Octubre 2050",
+      lugar: "Carta sellada al final del sendero", objeto: "banco_horizonte",
       titulo: "Amor duro, amor de verdad",
       texto: "Le dije adiós a la versión de mí que necesitaba gustarle a todo el mundo. Fue un amor duro. Pero me quedo con la que soy.",
       pregunta: "¿Sentiste la serenidad de elegirte a ti mismo, aun cuando signifique soltar lo demás?",
       youtubeId: "htyO4KFoMVY", cancion: "Nsqk — tuffluv",
-      pos: { x: -12, y: 2.2, z: -54 }
+      pos: { x: 0.0, y: 0, z: -47.5 }
     }
   ],
 
@@ -164,38 +174,31 @@ const CONFIG = {
     return lista[seed % lista.length];
   },
 
-  // Guion de la historia
+  // Guion de la historia (rápido, cinematográfico, lectura instantánea)
   guion: {
     aislamiento: [
-      { t: "Año 2050.", d: 2600 },
-      { t: "Tengo 4.812 seguidores, 37 grupos y una racha de 900 días.", d: 3800 },
-      { t: "Y no recuerdo la última vez que alguien me abrazó.", d: 4200 },
-      { t: "Cada día abro los ojos y lo primero que veo es esto.", d: 3600 },
-      { t: "Hasta que dejo de distinguir el ruido de mí.", d: 3800 }
+      { t: "2050. Demasiadas pantallas.", d: 2100 },
+      { t: "Demasiado ruido en la cabeza.", d: 2300 }
     ],
-    mensajeMadre: "Mamá: ¿Te acuerdas del parque al que íbamos? Dicen que ahora hay que dejar el móvil en la entrada. Ve. Te va a hacer bien. ❤",
+    mensajeMadre: "Mamá ❤ · «Hay un parque donde dejas el celular como llave. Ve. Te va a hacer bien.»",
     decision: [
-      { t: "…", d: 1600 },
-      { t: "Necesito salir.", d: 2600 }
+      { t: "El celular es la llave para desconectar.", d: 2200 }
     ],
     viaje: [
-      { t: "Dicen que aquí la gente deja lo que sintió.", d: 3600 },
-      { t: "No lo que publicó.", d: 3000 }
+      { t: "Santuario de Desconexión · 2050", d: 2400 },
+      { t: "Encaja tu celular en el pedestal para abrir.", d: 2800 }
     ],
     tutorial: [
-      "Hola. Soy Lumen, cuido este lugar. Gracias por dejar el teléfono ahí: no se va a ir a ninguna parte.",
-      "Esto es el Parque de las Huellas. Aquí nadie te mide, nadie te puntúa, nadie te está mirando.",
-      "Cada luz que verás ahí fuera es una huella: algo que alguien sintió de verdad en este lugar. Un quiebre, un alivio, una despedida…",
-      "Acércate a una luz y pulsa [E] para escucharla. Cada huella guarda la canción que sonaba por dentro en ese momento.",
-      "Muévete con [W][A][S][D] y mira moviendo el ratón. Si necesitas parar, pulsa [ESC].",
-      "Cuando quieras, pulsa [N] y deja tu propia huella. Puedes buscar tu canción en YouTube, escribir y hasta grabar tu voz.",
-      "No hay prisa. Te abro la puerta."
+      "Bienvenido. Tu celular ya es la llave.",
+      "Aquí no hay pantallas ni ruido. Solo aire real.",
+      "Acércate a las luces y pulsa [E] para escuchar un recuerdo.",
+      "Pulsa [N] cuando quieras dejar tu propia canción. Respira."
     ],
-    tresEscuchadas: "¿Lo notas? Toda esta gente se sentía como tú. No estás solo. Cuando quieras, pulsa [N] y deja tu huella.",
+    tresEscuchadas: "¿Sientes la calma? Pulsa [N] cuando quieras dejar tu huella.",
     epilogo: [
-      { t: "Tu huella ya es parte del parque.", d: 3200 },
-      { t: "Alguien, algún día, la escuchará y sentirá que no está solo.", d: 4200 },
-      { t: "Como tú hoy.", d: 2800 }
+      { t: "Tu huella ya vive en este parque.", d: 2800 },
+      { t: "Quien deje su celular aquí escuchará lo que sentiste.", d: 3400 },
+      { t: "Sin pantallas. De humano a humano.", d: 2600 }
     ]
   },
 
@@ -216,11 +219,11 @@ const CONFIG = {
 
   mundo: {
     alturaOjos: 1.68,
-    velocidad: 4.2,
-    radioParque: 62,
-    centroParque: { x: 0, z: -32 },
-    estanque: { x: 18, z: -30, r: 8 },
-    radioInteraccion: 4.2
+    velocidad: 4.4,
+    radioParque: 58,
+    centroParque: { x: 0, z: -30 },
+    estanque: { x: 13.5, z: -27.5, r: 8.2 },
+    radioInteraccion: 4.0
   }
 };
 

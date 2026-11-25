@@ -30,6 +30,7 @@
     <span>Mantén <kbd>Espacio</kbd> para saltar</span>
     <span class="barra"><i id="saltar-prog"></i></span>
   </div>
+  <div id="destello-luz" aria-hidden="true"></div>
   <div id="fundido"></div>
 
   <!-- Pantalla de Título -->
@@ -43,17 +44,17 @@
     <div class="titulo-bloque">
       <div class="titulo-anio vidrio">2 0 5 0</div>
       <h1 class="titulo-principal">Huellas Espaciales</h1>
-      <p class="titulo-sub">Un relato sobre soltar el ruido y volver a sentir.</p>
+      <p class="titulo-sub">Estaciones de desconexión: El celular como llave hacia lo humano.</p>
     </div>
 
     <div class="titulo-acciones">
-      <button id="btn-empezar" class="btn primario">✦ Comenzar la historia</button>
-      <button id="btn-ir-parque" class="btn oculto">🌿 Ir directo al parque</button>
+      <button id="btn-empezar" class="btn primario">✦ Comenzar la experiencia</button>
+      <button id="btn-ir-parque" class="btn">🌿 Ir directo al parque 360°</button>
     </div>
 
     <p class="titulo-aviso">
-      Usa <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> para caminar, mueve el ratón para mirar y pulsa <kbd>E</kbd> para interactuar.<br>
-      Música integrada exclusivamente con YouTube.
+      Usa <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> para caminar, mueve el ratón para mirar en 360° y pulsa <kbd>E</kbd> para interactuar.<br>
+      Entorno inmersivo fotorrealista con música integrada de YouTube.
     </p>
   </section>
 
@@ -101,72 +102,60 @@
     </div>
   </div>
 
-  <!-- Diálogo con Lumen -->
-  <div id="dialogo" class="vidrio" role="dialog" aria-live="polite">
-    <div class="dlg-avatar" aria-hidden="true"></div>
-    <div class="dlg-cuerpo">
-      <div class="dlg-nombre">LUMEN · GUARDIÁN DEL PARQUE</div>
-      <div class="dlg-texto" id="dlg-texto"></div>
-      <div class="dlg-pie" id="dlg-pie">Pulsa <kbd>E</kbd> o <kbd>Espacio</kbd> para continuar</div>
+  <!-- Diálogo con Lumen (Centrado, grande y cinematográfico) -->
+  <div id="dialogo" role="dialog" aria-live="polite">
+    <div class="dlg-cab">
+      <div class="dlg-avatar" aria-hidden="true"></div>
+      <div class="dlg-nombre">LUMEN · SANTUARIO</div>
+    </div>
+    <div class="dlg-texto" id="dlg-texto"></div>
+    <div class="dlg-pie" id="dlg-pie">
+      <div class="dlg-progreso" id="dlg-progreso"></div>
+      <span class="dlg-continuar">Pulsa <kbd>E</kbd> para continuar</span>
     </div>
   </div>
 
-  <!-- Modal Ver Huella -->
-  <div id="modal-huella" class="modal" role="dialog" aria-modal="true">
-    <div class="modal-caja">
-      <div class="modal-cab">
-        <div>
-          <div id="mh-chip" class="chip">✦ Gratitud</div>
-          <h2 id="mh-titulo" style="margin-top:.55rem;">Título</h2>
-          <div id="mh-meta" class="modal-meta">Autor · Fecha</div>
+  <!-- Modal Ver Huella (Interfaz contemplativa inmersiva) -->
+  <div id="modal-huella" class="modal modal-recuerdo" role="dialog" aria-modal="true">
+    <div class="modal-caja recuerdo-caja" id="mh-caja">
+      <div class="recuerdo-aura" id="mh-aura" aria-hidden="true"></div>
+      <div class="modal-cab recuerdo-cab">
+        <div class="recuerdo-head">
+          <div class="recuerdo-etiquetas">
+            <span id="mh-chip" class="chip">✦ Gratitud</span>
+            <span id="mh-lugar" class="recuerdo-lugar">Carta en el banco de roble</span>
+          </div>
+          <h2 id="mh-titulo" class="recuerdo-titulo">Título</h2>
+          <div id="mh-meta" class="modal-meta recuerdo-meta">Autor · Fecha</div>
         </div>
-        <button id="mh-cerrar" class="cerrar" aria-label="Cerrar">&times;</button>
+        <button id="mh-cerrar" class="cerrar recuerdo-cerrar" aria-label="Cerrar">&times;</button>
       </div>
-      <div class="modal-cuerpo">
-        <blockquote id="mh-texto" class="cita"></blockquote>
+      <div class="modal-cuerpo recuerdo-cuerpo">
+        <div class="recuerdo-carta">
+          <span class="recuerdo-comilla" aria-hidden="true">“</span>
+          <blockquote id="mh-texto" class="recuerdo-cita"></blockquote>
+        </div>
 
         <div id="mh-voz" class="voz-caja oculto">
           <span>🎙 Nota de voz</span>
           <audio id="mh-audio" controls></audio>
         </div>
 
-        <div>
-          <div class="yt-cab">
+        <div class="recuerdo-musica">
+          <div class="yt-cab recuerdo-yt-cab">
             <span class="yt-logo">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
-              YouTube
+              Sonando ahora
             </span>
-            <span id="mh-cancion" style="color:var(--texto-suave);"></span>
+            <span id="mh-cancion" class="recuerdo-cancion"></span>
           </div>
-          <div id="mh-yt" class="yt-marco"></div>
+          <div id="mh-yt" class="yt-marco recuerdo-yt-marco"></div>
         </div>
       </div>
-      <div class="modal-pie">
-        <a id="mh-yt-link" class="btn peq" target="_blank" rel="noopener">Abrir en YouTube ↗</a>
-        <button id="mh-cerrar-btn" class="btn primario peq">Volver al parque [ESC]</button>
+      <div class="modal-pie recuerdo-pie">
+        <a id="mh-yt-link" class="btn peq recuerdo-btn-sec" target="_blank" rel="noopener">Abrir en YouTube ↗</a>
+        <button id="mh-cerrar-btn" class="btn primario peq">Volver al santuario [ESC]</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Resonancia Emocional post-huella (Animación VisionOS Liquid Glass) -->
-  <div id="resonancia" class="vidrio res-oculto" role="dialog" aria-live="polite">
-    <div class="res-halo" id="res-halo"></div>
-    <div class="res-cab">
-      <span id="res-icono" class="res-icono">✦</span>
-      <div class="res-meta">
-        <span class="res-sub">ECO DEL RECUERDO</span>
-        <span id="res-huella-tit" class="res-huella-tit">Huella</span>
-      </div>
-    </div>
-    <p id="res-pregunta" class="res-pregunta">¿Sentiste esta emoción al escucharla?</p>
-    <div class="res-opciones" id="res-opciones">
-      <button class="res-btn" data-r="si">✦ Sí, lo sentí</button>
-      <button class="res-btn" data-r="procesando">✧ Aún lo estoy procesando</button>
-      <button class="res-btn" data-r="paz">✺ Me dejó en paz</button>
-    </div>
-    <div id="res-confirmacion" class="res-confirmacion oculto">
-      <span class="res-conf-icono">✨</span>
-      <span id="res-conf-txt">Tu sentir resuena con este rincón del parque.</span>
     </div>
   </div>
 

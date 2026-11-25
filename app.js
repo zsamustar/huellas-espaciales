@@ -151,6 +151,33 @@ class MotorAudio {
     osc.start(t); osc.stop(t + 1.3);
   }
 
+  tocarLlaveBloqueo() {
+    this.iniciar();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    // 1. Clic metálico de inserción del dispositivo
+    const osc1 = this.ctx.createOscillator();
+    const g1 = this.ctx.createGain();
+    osc1.type = "triangle";
+    osc1.frequency.setValueAtTime(1250, t);
+    osc1.frequency.exponentialRampToValueAtTime(280, t + 0.08);
+    g1.gain.setValueAtTime(0.09, t);
+    g1.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+    osc1.connect(g1); g1.connect(this.master);
+    osc1.start(t); osc1.stop(t + 0.08);
+
+    // 2. Cierre mecánico electromagnético pesado
+    const osc2 = this.ctx.createOscillator();
+    const g2 = this.ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(140, t + 0.04);
+    osc2.frequency.exponentialRampToValueAtTime(42, t + 0.42);
+    g2.gain.setValueAtTime(0.19, t + 0.04);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.48);
+    osc2.connect(g2); g2.connect(this.master);
+    osc2.start(t + 0.04); osc2.stop(t + 0.48);
+  }
+
   tocarPajaro() {
     if (!this.ctx || !this.enParque || this.silenciadoTemporal) return;
     const t = this.ctx.currentTime;
@@ -505,7 +532,6 @@ class Juego {
     this._cachearDOM();
     this._iniciar3D();
     this._construirManoYCelular();
-    this._construirCuartoAislamiento();
     this._construirUmbral();
     this._construirParque();
     this._construirLumen();
@@ -521,15 +547,16 @@ class Juego {
     this.dom = {
       canvas: $("canvas-3d"),
       pantallaTitulo: $("pantalla-titulo"), btnEmpezar: $("btn-empezar"), btnIrParque: $("btn-ir-parque"),
-      fundido: $("fundido"), vineta: $("viñeta"), glitch: $("glitch"), notifs: $("notifs"),
+      fundido: $("fundido"), destelloLuz: $("destello-luz"), vineta: $("viñeta"), glitch: $("glitch"), notifs: $("notifs"),
       subtitulos: $("subtitulos"), tarjetaCap: $("tarjeta-capitulo"), capNum: $("cap-num"), capTitulo: $("cap-titulo"),
       saltarProg: $("saltar-prog"),
       hud: $("hud"), objBox: $("objetivo"), objEtq: $("obj-etq"), objTxt: $("obj-txt"), objSub: $("obj-sub"),
       brujulaMarcas: $("brujula-marcas"), mira: $("mira"), prompt: $("prompt"), promptTxt: $("prompt-txt"),
       etiqOrbe: $("etiqueta-orbe"), eoEmo: $("eo-emo"), eoTit: $("eo-tit"), eoMus: $("eo-mus"),
       contadorTxt: $("contador-txt"), btnNuevaHuella: $("btn-nueva-huella"), btnPausa: $("btn-pausa"),
-      dialogo: $("dialogo"), dlgTexto: $("dlg-texto"), dlgPie: $("dlg-pie"),
-      modalHuella: $("modal-huella"), mhChip: $("mh-chip"), mhTitulo: $("mh-titulo"), mhMeta: $("mh-meta"),
+      dialogo: $("dialogo"), dlgTexto: $("dlg-texto"), dlgPie: $("dlg-pie"), dlgProgreso: $("dlg-progreso"),
+      modalHuella: $("modal-huella"), mhCaja: $("mh-caja"), mhChip: $("mh-chip"), mhLugar: $("mh-lugar"),
+      mhTitulo: $("mh-titulo"), mhMeta: $("mh-meta"),
       mhTexto: $("mh-texto"), mhVoz: $("mh-voz"), mhAudio: $("mh-audio"), mhCancion: $("mh-cancion"),
       mhYt: $("mh-yt"), mhYtLink: $("mh-yt-link"), mhCerrar: $("mh-cerrar"), mhCerrarBtn: $("mh-cerrar-btn"),
       modalCrear: $("modal-crear"), formCrear: $("form-crear"), mcEmociones: $("mc-emociones"),
@@ -557,28 +584,238 @@ class Juego {
   _iniciar3D() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xdcf0f5);
-    this.scene.fog = new THREE.FogExp2(0xdcf0f5, 0.011);
+    this.nieblaParque = new THREE.FogExp2(0xdce9df, 0.0115);
 
-    this.camera = new THREE.PerspectiveCamera(66, innerWidth / innerHeight, 0.05, 220);
+    this.camera = new THREE.PerspectiveCamera(66, innerWidth / innerHeight, 0.05, 260);
     this.scene.add(this.camera);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.dom.canvas, antialias: true, powerPreference: "high-performance" });
     this.renderer.setSize(innerWidth, innerHeight);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.35));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.outputEncoding = THREE.sRGBEncoding;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 1.08;
 
-    this.hemi = new THREE.HemisphereLight(0xfffaf0, 0x6d997b, 1.15);
+    // Iluminación realista de mañana dorada con sombras suaves
+    this.hemi = new THREE.HemisphereLight(0xfffaf0, 0x4f7559, 0.95);
     this.scene.add(this.hemi);
-    this.sol = new THREE.DirectionalLight(0xfff1d6, 1.25);
-    this.sol.position.set(22, 38, -14);
+
+    this.sol = new THREE.DirectionalLight(0xfff0cc, 1.75);
+    this.sol.position.set(26, 38, -10);
+    this.sol.castShadow = true;
+    this.sol.shadow.mapSize.width = 2048;
+    this.sol.shadow.mapSize.height = 2048;
+    this.sol.shadow.camera.near = 4;
+    this.sol.shadow.camera.far = 120;
+    const sc = 48;
+    this.sol.shadow.camera.left = -sc;
+    this.sol.shadow.camera.right = sc;
+    this.sol.shadow.camera.top = sc;
+    this.sol.shadow.camera.bottom = -sc;
+    this.sol.shadow.bias = -0.0005;
     this.scene.add(this.sol);
+
+    // Panoramas 360 fotorrealistas + Iluminación Basada en Imagen (IBL)
+    const texLoader = new THREE.TextureLoader();
+    const maxAniso = this.renderer.capabilities.getMaxAnisotropy ? this.renderer.capabilities.getMaxAnisotropy() : 4;
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    pmrem.compileEquirectangularShader();
+
+    this.texturaHabitacion = texLoader.load("assets/habitacion_360.jpg");
+    this.texturaHabitacion.mapping = THREE.EquirectangularReflectionMapping;
+    this.texturaHabitacion.encoding = THREE.sRGBEncoding;
+    this.texturaHabitacion.anisotropy = Math.min(8, maxAniso);
+
+    this.texturaParque = texLoader.load("assets/parque_360.jpg", (tex) => {
+      try {
+        const envRT = pmrem.fromEquirectangular(tex);
+        this.scene.environment = envRT.texture;
+        pmrem.dispose();
+      } catch (_) {}
+    });
+    this.texturaParque.mapping = THREE.EquirectangularReflectionMapping;
+    this.texturaParque.encoding = THREE.sRGBEncoding;
+    this.texturaParque.anisotropy = Math.min(8, maxAniso);
+
+    // Cargar texturas fotográficas PBR reales para objetos 3D del parque
+    const cargarPBR = (url, repX = 1, repY = 1) => {
+      const t = texLoader.load(url);
+      t.wrapS = THREE.RepeatWrapping;
+      t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(repX, repY);
+      t.encoding = THREE.sRGBEncoding;
+      t.anisotropy = Math.min(8, maxAniso);
+      return t;
+    };
+
+    this.texBrillo = this._crearTexturaBrillo();
+    this.texCarta = this._crearTexturaCarta();
+    this.texFollaje = this._crearTexturaFollaje();
+    this.texMascaraSuelo = this._crearMascaraRadial();
+
+    this.mats = {
+      cesped: new THREE.MeshStandardMaterial({
+        map: cargarPBR("assets/tex_cesped.jpg", 26, 26),
+        color: 0xc6d4b8,
+        roughness: 0.94,
+        metalness: 0.01
+      }),
+      grava: new THREE.MeshStandardMaterial({
+        map: cargarPBR("assets/tex_grava.jpg", 2.2, 14),
+        color: 0xc2b59e,
+        roughness: 0.96,
+        metalness: 0.01
+      }),
+      madera: new THREE.MeshStandardMaterial({
+        map: cargarPBR("assets/tex_madera.jpg", 1.5, 1.5),
+        color: 0xd8c6b2,
+        roughness: 0.65,
+        metalness: 0.04
+      }),
+      corteza: new THREE.MeshStandardMaterial({
+        map: cargarPBR("assets/tex_corteza.jpg", 2, 4),
+        color: 0xc9bfb4,
+        roughness: 0.94,
+        metalness: 0.02
+      }),
+      hierro: new THREE.MeshStandardMaterial({
+        color: 0x1d2421, roughness: 0.38, metalness: 0.78
+      }),
+      piedra: new THREE.MeshStandardMaterial({
+        map: cargarPBR("assets/tex_grava.jpg", 1.5, 1.5),
+        color: 0x626960,
+        roughness: 0.92,
+        metalness: 0.03
+      }),
+      papel: new THREE.MeshStandardMaterial({
+        map: this.texCarta, roughness: 0.78, metalness: 0.02, side: THREE.DoubleSide
+      }),
+      follaje: new THREE.MeshStandardMaterial({
+        map: this.texFollaje,
+        alphaTest: 0.32,
+        roughness: 0.75,
+        metalness: 0.02,
+        side: THREE.DoubleSide
+      })
+    };
+
+    const geo360 = new THREE.SphereGeometry(210, 64, 48);
+    this.mat360 = new THREE.MeshBasicMaterial({
+      map: this.texturaParque,
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false
+    });
+    this.esfera360 = new THREE.Mesh(geo360, this.mat360);
+    this.esfera360.renderOrder = -1;
+    this.esfera360.rotation.y = Math.PI * 0.5;
+    this.scene.add(this.esfera360);
+    this.scene.background = this.texturaParque;
 
     addEventListener("resize", () => {
       this.camera.aspect = innerWidth / innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(innerWidth, innerHeight);
     });
+  }
+
+  _crearTexturaBrillo() {
+    const c = document.createElement("canvas");
+    c.width = 128; c.height = 128;
+    const ctx = c.getContext("2d");
+    const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grad.addColorStop(0.0, "rgba(255,255,255,1)");
+    grad.addColorStop(0.22, "rgba(255,250,235,0.85)");
+    grad.addColorStop(0.55, "rgba(255,235,180,0.28)");
+    grad.addColorStop(1.0, "rgba(255,235,180,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(c);
+  }
+
+  _crearMascaraRadial() {
+    const c = document.createElement("canvas");
+    c.width = 256; c.height = 256;
+    const ctx = c.getContext("2d");
+    const grad = ctx.createRadialGradient(128, 128, 72, 128, 128, 126);
+    grad.addColorStop(0.0, "#ffffff");
+    grad.addColorStop(0.72, "#ffffff");
+    grad.addColorStop(1.0, "#000000");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 256, 256);
+    return new THREE.CanvasTexture(c);
+  }
+
+  _crearTexturaCarta() {
+    const c = document.createElement("canvas");
+    c.width = 256; c.height = 320;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#faf3e3";
+    ctx.fillRect(0, 0, 256, 320);
+    ctx.strokeStyle = "rgba(130, 110, 88, 0.22)";
+    ctx.lineWidth = 2;
+    for (let y = 52; y < 280; y += 22) {
+      ctx.beginPath();
+      ctx.moveTo(26, y);
+      ctx.lineTo(210 + Math.sin(y) * 18, y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(85, 68, 52, 0.35)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(10, 10, 236, 300);
+    const tex = new THREE.CanvasTexture(c);
+    tex.encoding = THREE.sRGBEncoding;
+    return tex;
+  }
+
+  _crearTexturaFollaje() {
+    const c = document.createElement("canvas");
+    c.width = 512; c.height = 512;
+    const ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, 512, 512);
+    // Ramitas finas
+    ctx.strokeStyle = "#4d3c2b";
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(256, 480); ctx.quadraticCurveTo(250, 290, 256, 110); ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(256, 340); ctx.lineTo(130, 210); ctx.moveTo(256, 300); ctx.lineTo(385, 190); ctx.stroke();
+    // Racimo orgánico de hojas botánicas iluminadas por el sol
+    const tonos = ["#3a6b35", "#4c8040", "#5f9446", "#74a64c", "#8eb854", "#315b2d", "#a6bd53"];
+    for (let i = 0; i < 145; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const rad = Math.pow(Math.random(), 0.65) * 195;
+      const x = 256 + Math.cos(ang) * rad;
+      const y = 250 + Math.sin(ang) * rad * 0.92;
+      const rx = 14 + Math.random() * 18;
+      const ry = 7 + Math.random() * 9;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(Math.random() * Math.PI * 2);
+      ctx.fillStyle = tonos[Math.floor(Math.random() * tonos.length)];
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255, 245, 195, 0.22)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-rx * 0.7, 0); ctx.lineTo(rx * 0.7, 0); ctx.stroke();
+      ctx.restore();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.encoding = THREE.sRGBEncoding;
+    return tex;
+  }
+
+  _mostrarEscena(modo) {
+    const enHabitacion = modo === "HABITACION";
+    if (this.grupoUmbral) this.grupoUmbral.visible = !enHabitacion;
+    if (this.grupoParque) this.grupoParque.visible = !enHabitacion;
+    this.orbes.forEach((o) => { o.grupo.visible = !enHabitacion; });
+    this.scene.fog = enHabitacion ? null : this.nieblaParque;
+    if (this.esfera360) {
+      this.esfera360.rotation.y = Math.PI * 0.5;
+    }
   }
 
   _construirManoYCelular() {
@@ -671,117 +908,256 @@ class Juego {
     this.pantallaTex.needsUpdate = true;
   }
 
-  _construirCuartoAislamiento() {
-    // Habitación minimalista aislada en x = 80 (para el Acto I)
-    const g = new THREE.Group();
-    g.position.set(80, 0, 0);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x1e262c, roughness: 0.9 });
-    const suelo = new THREE.Mesh(new THREE.PlaneGeometry(7, 7), mat);
-    suelo.rotation.x = -Math.PI / 2;
-    g.add(suelo);
-
-    const pared = (w, h, d, x, y, z) => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-      m.position.set(x, y, z);
-      g.add(m);
-    };
-    pared(7, 3.2, 0.2, 0, 1.6, -3.5);
-    pared(7, 3.2, 0.2, 0, 1.6, 3.5);
-    pared(0.2, 3.2, 7, -3.5, 1.6, 0);
-    pared(0.2, 3.2, 7, 3.5, 1.6, 0);
-
-    // Ventana tenue azulada
-    const vent = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.5), new THREE.MeshBasicMaterial({ color: 0x3b5366 }));
-    vent.position.set(0, 1.7, -3.38);
-    g.add(vent);
-
-    // Cama simple
-    const cama = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.45, 2.2), new THREE.MeshStandardMaterial({ color: 0x2a343b }));
-    cama.position.set(-1.5, 0.22, -1.2);
-    g.add(cama);
-
-    this.scene.add(g);
-  }
-
   _construirUmbral() {
     const g = new THREE.Group();
-    const piedra = new THREE.MeshStandardMaterial({ color: 0xede5d6, roughness: 0.65 });
-    const muro = new THREE.MeshStandardMaterial({ color: 0xf7f3eb, roughness: 0.85 });
+    const travertino = new THREE.MeshStandardMaterial({
+      map: this.mats.grava.map, color: 0xe2d8c7, roughness: 0.72, metalness: 0.05
+    });
+    const cristalArq = new THREE.MeshStandardMaterial({
+      color: 0xeef7f3, roughness: 0.08, metalness: 0.18, transparent: true, opacity: 0.24,
+      envMapIntensity: 1.5, side: THREE.DoubleSide
+    });
+    const titanio = new THREE.MeshStandardMaterial({ color: 0x1b2420, roughness: 0.28, metalness: 0.82 });
+    const laton = new THREE.MeshStandardMaterial({ color: 0xd8b46a, roughness: 0.28, metalness: 0.88 });
+    const ledCalido = new THREE.MeshBasicMaterial({ color: 0xffe4a8 });
 
-    const suelo = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 10.5), piedra);
+    // 1. Suelo arquitectónico de piedra travertino + tarimas laterales de roble real
+    const suelo = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 10.6), travertino);
     suelo.rotation.x = -Math.PI / 2;
-    suelo.position.set(0, 0, 0.5);
+    suelo.position.set(0, 0.01, 0.5);
+    suelo.receiveShadow = true;
     g.add(suelo);
 
-    const muroTras = new THREE.Mesh(new THREE.BoxGeometry(9.6, 4.6, 0.3), muro);
+    [-3.65, 3.65].forEach((lx) => {
+      const tarima = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.04, 10.2), this.mats.madera);
+      tarima.position.set(lx, 0.02, 0.5);
+      tarima.receiveShadow = true;
+      g.add(tarima);
+    });
+
+    // Tiras LED cálidas empotradas en el suelo guiando la vista hacia la llave y el parque
+    [-1.45, 1.45].forEach((gx) => {
+      const guia = new THREE.Mesh(new THREE.PlaneGeometry(0.055, 9.6), ledCalido);
+      guia.rotation.x = -Math.PI / 2;
+      guia.position.set(gx, 0.022, 0.4);
+      g.add(guia);
+    });
+
+    // 2. Envolvente de cristal templado panorámico
+    const muroTras = new THREE.Mesh(new THREE.BoxGeometry(9.6, 4.6, 0.12), cristalArq);
     muroTras.position.set(0, 2.3, 5.75);
     g.add(muroTras);
 
-    const muroL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.6, 10.5), muro);
+    const muroL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.6, 10.5), cristalArq);
     muroL.position.set(-4.8, 2.3, 0.5);
     g.add(muroL);
 
-    const muroR = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.6, 10.5), muro);
+    const muroR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.6, 10.5), cristalArq);
     muroR.position.set(4.8, 2.3, 0.5);
     g.add(muroR);
 
-    // Pedestal + caja
-    const col = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.4, 0.48, 0.95, 16),
-      new THREE.MeshStandardMaterial({ color: 0x314a3f, roughness: 0.45 })
-    );
-    col.position.set(0, 0.475, 0.2);
-    g.add(col);
+    const techoCristal = new THREE.Mesh(new THREE.PlaneGeometry(9.8, 10.7), cristalArq);
+    techoCristal.rotation.x = Math.PI / 2;
+    techoCristal.position.set(0, 4.62, 0.5);
+    g.add(techoCristal);
 
-    const bandeja = new THREE.Mesh(
-      new THREE.BoxGeometry(0.64, 0.1, 0.52),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.78 })
-    );
-    bandeja.position.set(0, 0.98, 0.2);
-    g.add(bandeja);
+    // 3. Costillas arquitectónicas de titanio oscuro y pérgola de listones de roble (proyectan sombras cálidas)
+    for (let i = 0; i < 5; i++) {
+      const rz = -4.65 + i * 2.58;
+      // Pilares laterales
+      [-4.74, 4.74].forEach((rx) => {
+        const pilar = new THREE.Mesh(new THREE.BoxGeometry(0.22, 4.65, 0.24), titanio);
+        pilar.position.set(rx, 2.32, rz);
+        pilar.castShadow = true;
+        g.add(pilar);
+        // Detalle vertical en madera de roble interior
+        const listonInt = new THREE.Mesh(new THREE.BoxGeometry(0.09, 4.5, 0.14), this.mats.madera);
+        listonInt.position.set(rx + (rx < 0 ? 0.14 : -0.14), 2.26, rz);
+        listonInt.castShadow = true;
+        g.add(listonInt);
+      });
+      // Viga superior de roble y titanio
+      const viga = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.22, 0.22), titanio);
+      viga.position.set(0, 4.58, rz);
+      viga.castShadow = true;
+      g.add(viga);
+    }
+    // Listones finos de pérgola en el techo para luz tamizada
+    for (let s = 0; s < 14; s++) {
+      const listonTecho = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.08, 0.11), this.mats.madera);
+      listonTecho.position.set(0, 4.46, -4.1 + s * 0.72);
+      listonTecho.castShadow = true;
+      g.add(listonTecho);
+    }
 
-    // Letrero
+    // Iluminación cálida interior de la cápsula
+    const luzCapsula = new THREE.PointLight(0xfff1d6, 0.85, 13);
+    luzCapsula.position.set(0, 3.85, 1.2);
+    g.add(luzCapsula);
+
+    // 4. Pedestal monolítico escultórico: Obsidiana mate + collar de latón cepillado
+    const plinto = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.72, 0.1, 32), titanio);
+    plinto.position.set(0, 0.06, 0.2);
+    plinto.receiveShadow = true;
+    g.add(plinto);
+
+    const anilloBase = new THREE.Mesh(new THREE.TorusGeometry(0.64, 0.014, 12, 48), laton);
+    anilloBase.rotation.x = Math.PI / 2;
+    anilloBase.position.set(0, 0.11, 0.2);
+    g.add(anilloBase);
+
+    const totem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.28, 0.36, 0.96, 24),
+      new THREE.MeshStandardMaterial({ color: 0x131a17, metalness: 0.78, roughness: 0.2 })
+    );
+    totem.position.set(0, 0.58, 0.2);
+    totem.castShadow = true;
+    totem.receiveShadow = true;
+    g.add(totem);
+
+    // Collar superior de latón cepillado
+    const collarLaton = new THREE.Mesh(new THREE.TorusGeometry(0.285, 0.016, 12, 40), laton);
+    collarLaton.rotation.x = Math.PI / 2;
+    collarLaton.position.set(0, 1.05, 0.2);
+    g.add(collarLaton);
+
+    // Ranura profunda receptora para insertar el celular verticalmente
+    const ranuraBase = new THREE.Mesh(
+      new THREE.BoxGeometry(0.24, 0.055, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0x050807, roughness: 0.12, metalness: 0.92 })
+    );
+    ranuraBase.position.set(0, 1.06, 0.2);
+    g.add(ranuraBase);
+
+    // Tira luminosa dentro de la ranura
+    this.ranuraLuz = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.2, 0.045),
+      new THREE.MeshBasicMaterial({ color: 0xff8a4c, transparent: true, opacity: 0.92, side: THREE.DoubleSide })
+    );
+    this.ranuraLuz.rotation.x = -Math.PI / 2;
+    this.ranuraLuz.position.set(0, 1.09, 0.2);
+    g.add(this.ranuraLuz);
+
+    // Anillo luminoso de estado de la esclusa (ámbar/coral = cerrado, verde esmeralda = desbloqueado)
+    this.anilloLlave = new THREE.Mesh(
+      new THREE.RingGeometry(0.19, 0.245, 48),
+      new THREE.MeshBasicMaterial({ color: 0xff6b4a, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+    );
+    this.anilloLlave.rotation.x = -Math.PI / 2;
+    this.anilloLlave.position.set(0, 1.075, 0.2);
+    g.add(this.anilloLlave);
+
+    // Onda expansiva luminosa al encajar el celular
+    this.anilloPulso = new THREE.Mesh(
+      new THREE.RingGeometry(0.22, 0.29, 48),
+      new THREE.MeshBasicMaterial({ color: 0x4bffa5, transparent: true, opacity: 0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })
+    );
+    this.anilloPulso.rotation.x = -Math.PI / 2;
+    this.anilloPulso.position.set(0, 1.082, 0.2);
+    g.add(this.anilloPulso);
+    this.pulsoT = -1;
+
+    // Luz local del pedestal
+    this.luzTotem = new THREE.PointLight(0xff844b, 1.0, 5.5);
+    this.luzTotem.position.set(0, 1.45, 0.2);
+    g.add(this.luzTotem);
+
+    // Placa holográfica elegante sobre el monolito
     const c = document.createElement("canvas");
-    c.width = 512; c.height = 256;
+    c.width = 512; c.height = 200;
     const ctx = c.getContext("2d");
-    ctx.fillStyle = "rgba(255,255,255,0.95)";
-    ctx.fillRect(10, 10, 492, 236);
-    ctx.strokeStyle = "#4f9a74";
-    ctx.lineWidth = 6;
-    ctx.strokeRect(10, 10, 492, 236);
+    ctx.fillStyle = "rgba(12, 24, 20, 0.86)";
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(10, 10, 492, 180, 26) : ctx.rect(10, 10, 492, 180);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(216, 180, 106, 0.72)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
     ctx.textAlign = "center";
-    ctx.fillStyle = "#16302a";
-    ctx.font = "bold 38px sans-serif";
-    ctx.fillText("DEJA TU CELULAR", 256, 94);
-    ctx.fillStyle = "#5d7469";
-    ctx.font = "italic 24px Georgia, serif";
-    ctx.fillText("Para poder conectar contigo mismo", 256, 144);
-    ctx.fillStyle = "#2c5a47";
-    ctx.font = "bold 22px sans-serif";
-    ctx.fillText("Acércate y pulsa [E]", 256, 198);
+    ctx.fillStyle = "#d8b46a";
+    ctx.font = "700 17px sans-serif";
+    ctx.fillText("CÁPSULA DE DESCONEXIÓN · 2050", 256, 54);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 30px sans-serif";
+    ctx.fillText("Tu celular es la llave", 256, 106);
+    ctx.fillStyle = "#7cf0bd";
+    ctx.font = "600 20px sans-serif";
+    ctx.fillText("Pulsa [E] para depositarlo y abrir", 256, 152);
 
     const cartel = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.3, 0.65),
+      new THREE.PlaneGeometry(1.36, 0.54),
       new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, side: THREE.DoubleSide })
     );
-    cartel.position.set(0, 1.68, 0.2);
+    cartel.position.set(0, 1.72, 0.2);
+    this.cartelUmbral = cartel;
     g.add(cartel);
 
-    // Puertas correderas
-    const matPuerta = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.72, roughness: 0.25 });
-    this.puertaIzq = new THREE.Mesh(new THREE.BoxGeometry(2.4, 4.6, 0.12), matPuerta);
-    this.puertaIzq.position.set(-2.3, 2.3, -4.7);
+    // 5. Puertas correderas de cristal templado con marco fino de titanio y tiras luminosas de estado
+    const matPuerta = new THREE.MeshStandardMaterial({
+      color: 0xf0f8f5, transparent: true, opacity: 0.42, roughness: 0.08, metalness: 0.2, envMapIntensity: 1.8
+    });
+    const crearHojaPuerta = (lado) => {
+      const hoja = new THREE.Group();
+      const vidrio = new THREE.Mesh(new THREE.BoxGeometry(2.36, 4.45, 0.08), matPuerta);
+      const bordeExt = new THREE.Mesh(new THREE.BoxGeometry(0.1, 4.5, 0.12), titanio);
+      bordeExt.position.x = lado * 1.16;
+      const bordeInt = new THREE.Mesh(new THREE.BoxGeometry(0.06, 4.5, 0.11), titanio);
+      bordeInt.position.x = -lado * 1.16;
+      const tiraLuz = new THREE.Mesh(
+        new THREE.BoxGeometry(0.025, 4.2, 0.13),
+        new THREE.MeshBasicMaterial({ color: 0xff7b4a })
+      );
+      tiraLuz.position.x = -lado * 1.12;
+      hoja.add(vidrio, bordeExt, bordeInt, tiraLuz);
+      hoja.userData.tiraLuz = tiraLuz;
+      return hoja;
+    };
+
+    this.puertaIzq = crearHojaPuerta(-1);
+    this.puertaIzq.position.set(-1.2, 2.28, -4.65);
     g.add(this.puertaIzq);
 
-    this.puertaDer = new THREE.Mesh(new THREE.BoxGeometry(2.4, 4.6, 0.12), matPuerta);
-    this.puertaDer.position.set(2.3, 2.3, -4.7);
+    this.puertaDer = crearHojaPuerta(1);
+    this.puertaDer.position.set(1.2, 2.28, -4.65);
     g.add(this.puertaDer);
 
-    // Dintel
-    const dintel = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.5, 0.3), muro);
-    dintel.position.set(0, 4.6, -4.7);
+    // Paneles fijos laterales de cristal junto a las puertas
+    [-3.55, 3.55].forEach((px) => {
+      const fijo = new THREE.Mesh(new THREE.BoxGeometry(2.3, 4.45, 0.08), cristalArq);
+      fijo.position.set(px, 2.28, -4.65);
+      g.add(fijo);
+    });
+
+    // Dintel arquitectónico con acento en latón
+    const dintel = new THREE.Mesh(new THREE.BoxGeometry(9.8, 0.34, 0.32), titanio);
+    dintel.position.set(0, 4.58, -4.65);
     g.add(dintel);
 
+    // Luz volumétrica dorada que inunda el pabellón hacia adentro al abrir las puertas
+    this.hazLuz = new THREE.Group();
+    const matHaz = new THREE.MeshBasicMaterial({
+      map: this.texBrillo, color: 0xffe596, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+    });
+    const hazSuelo = new THREE.Mesh(new THREE.PlaneGeometry(6.8, 10.5), matHaz);
+    hazSuelo.rotation.x = -Math.PI / 2;
+    hazSuelo.position.set(0, 0.04, -1.2);
+    const hazAire = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 5.2), matHaz.clone());
+    hazAire.position.set(0, 2.35, -4.3);
+    const hazRayoL = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 9.2), matHaz.clone());
+    hazRayoL.rotation.set(-Math.PI / 2.6, 0.25, 0);
+    hazRayoL.position.set(-0.9, 1.5, -2.0);
+    const hazRayoR = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 9.2), matHaz.clone());
+    hazRayoR.rotation.set(-Math.PI / 2.6, -0.25, 0);
+    hazRayoR.position.set(0.9, 1.5, -2.0);
+    this.hazLuz.add(hazSuelo, hazAire, hazRayoL, hazRayoR);
+    g.add(this.hazLuz);
+
+    this.luzPortal = new THREE.PointLight(0xffe194, 0, 18);
+    this.luzPortal.position.set(0, 2.6, -4.2);
+    g.add(this.luzPortal);
+
+    this.grupoUmbral = g;
     this.scene.add(g);
   }
 
@@ -789,155 +1165,275 @@ class Juego {
     const g = new THREE.Group();
     const { x: cx, z: cz } = CONFIG.mundo.centroParque;
 
-    // Pradera base
-    const pradera = new THREE.Mesh(
-      new THREE.CircleGeometry(78, 48),
-      new THREE.MeshStandardMaterial({ color: 0x73a57a, roughness: 0.9 })
-    );
+    // 1. Pradera de césped fotográfico PBR con sombras reales
+    const pradera = new THREE.Mesh(new THREE.CircleGeometry(76, 64), this.mats.cesped);
     pradera.rotation.x = -Math.PI / 2;
-    pradera.position.set(cx, -0.01, cz);
+    pradera.position.set(cx, -0.02, cz);
+    pradera.receiveShadow = true;
     g.add(pradera);
 
-    // Senderos de arena
-    const matSendero = new THREE.MeshStandardMaterial({ color: 0xefe3ce, roughness: 0.92, side: THREE.DoubleSide });
-    const anillo = new THREE.Mesh(new THREE.RingGeometry(13, 16.5, 36), matSendero);
-    anillo.rotation.x = -Math.PI / 2;
-    anillo.position.set(cx, 0.02, cz);
-    g.add(anillo);
+    // 2. Senderos naturales de grava soleada (con glorietas suaves en los cruces)
+    const crearTramoSendero = (x, z, largo, ancho, rotY = 0) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), this.mats.grava);
+      m.rotation.x = -Math.PI / 2;
+      m.rotation.z = rotY;
+      m.position.set(x, 0.015, z);
+      m.receiveShadow = true;
+      g.add(m);
+    };
+    crearTramoSendero(0, -14.5, 20.5, 3.3, 0);          // Salida directa desde el umbral
+    crearTramoSendero(-0.6, -35.0, 24.0, 3.0, 0.05);    // Camino central hacia el horizonte
+    crearTramoSendero(-5.5, -24.0, 12.5, 2.2, 0.95);    // Ramal hacia la arboleda de robles
+    crearTramoSendero(3.6, -26.2, 8.8, 2.1, -0.78);     // Ramal hacia la orilla del estanque
 
-    const entrada = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 16), matSendero);
-    entrada.rotation.x = -Math.PI / 2;
-    entrada.position.set(0, 0.02, -12.5);
-    g.add(entrada);
+    // Glorietas orgánicas de grava en los cruces y mirador final
+    [[0, -24.5, 2.9], [-0.2, -46.8, 3.4]].forEach(([gx, gz, gr]) => {
+      const glorieta = new THREE.Mesh(new THREE.CircleGeometry(gr, 28), this.mats.grava);
+      glorieta.rotation.x = -Math.PI / 2;
+      glorieta.position.set(gx, 0.017, gz);
+      glorieta.receiveShadow = true;
+      g.add(glorieta);
+    });
 
-    const cruce = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 34), matSendero);
-    cruce.rotation.x = -Math.PI / 2;
-    cruce.position.set(0, 0.02, -32);
-    g.add(cruce);
+    // Piedras de borde a lo largo del sendero principal
+    for (let i = 0; i < 24; i++) {
+      const lado = i % 2 === 0 ? -1 : 1;
+      const z = -6.5 - i * 1.75;
+      const x = lado * (1.85 + Math.sin(i * 1.3) * 0.25);
+      const p = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18 + (i % 3) * 0.06, 1), this.mats.piedra);
+      p.scale.set(1.2, 0.52, 0.95);
+      p.position.set(x, 0.06, z);
+      p.rotation.y = i * 1.1;
+      p.castShadow = true;
+      p.receiveShadow = true;
+      g.add(p);
+    }
 
-    // Estanque con reflejo y nenúfares
+    // 3. Estanque natural reflectante (usa IBL del cielo 360°)
     const est = CONFIG.mundo.estanque;
+    const fondoEst = new THREE.Mesh(
+      new THREE.CircleGeometry(est.r + 0.5, 40),
+      new THREE.MeshStandardMaterial({ color: 0x162b26, roughness: 0.95 })
+    );
+    fondoEst.rotation.x = -Math.PI / 2;
+    fondoEst.position.set(est.x, 0.01, est.z);
+    g.add(fondoEst);
+
     this.agua = new THREE.Mesh(
-      new THREE.CircleGeometry(est.r, 32),
-      new THREE.MeshStandardMaterial({ color: 0x56a3a6, roughness: 0.18, metalness: 0.25 })
+      new THREE.CircleGeometry(est.r, 48),
+      new THREE.MeshStandardMaterial({
+        color: 0x3b6e6c, roughness: 0.07, metalness: 0.45,
+        transparent: true, opacity: 0.86, envMapIntensity: 1.7
+      })
     );
     this.agua.rotation.x = -Math.PI / 2;
-    this.agua.position.set(est.x, 0.04, est.z);
+    this.agua.position.set(est.x, 0.045, est.z);
+    this.agua.receiveShadow = true;
     g.add(this.agua);
 
-    const matNenufar = new THREE.MeshStandardMaterial({ color: 0x3b7a52, roughness: 0.8 });
-    const matFlor = new THREE.MeshBasicMaterial({ color: 0xffe0ec });
-    for (let i = 0; i < 9; i++) {
-      const a = (i / 9) * Math.PI * 2 + Math.random() * 0.5;
-      const d = 1.5 + Math.random() * (est.r - 2.2);
-      const nx = est.x + Math.cos(a) * d;
-      const nz = est.z + Math.sin(a) * d;
-      const n = new THREE.Mesh(new THREE.CircleGeometry(0.42 + Math.random() * 0.25, 12), matNenufar);
-      n.rotation.x = -Math.PI / 2;
-      n.position.set(nx, 0.055, nz);
-      g.add(n);
-      if (i % 2 === 0) {
-        const flor = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), matFlor);
-        flor.position.set(nx, 0.14, nz);
+    // Piedras de río, juncos y nenúfares en la orilla del estanque
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * Math.PI * 2;
+      const rx = est.x + Math.cos(a) * (est.r + 0.15 + Math.sin(i * 2.1) * 0.35);
+      const rz = est.z + Math.sin(a) * (est.r + 0.15 + Math.cos(i * 1.7) * 0.35);
+      const roca = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32 + (i % 4) * 0.12, 1), this.mats.piedra);
+      roca.scale.set(1.3, 0.55, 1.0);
+      roca.position.set(rx, 0.12, rz);
+      roca.rotation.set(0.1, a, 0.05);
+      roca.castShadow = true;
+      roca.receiveShadow = true;
+      g.add(roca);
+    }
+
+    // Nenúfares flotando en el agua
+    const matNenufar = new THREE.MeshStandardMaterial({ color: 0x3f7d44, roughness: 0.45, side: THREE.DoubleSide });
+    const matFlor = new THREE.MeshStandardMaterial({ color: 0xffeef2, roughness: 0.4 });
+    for (let i = 0; i < 16; i++) {
+      const a = 2.1 + (i / 16) * 2.8;
+      const r = est.r * (0.42 + (i % 5) * 0.11);
+      const nx = est.x + Math.cos(a) * r;
+      const nz = est.z + Math.sin(a) * r;
+      const hoja = new THREE.Mesh(new THREE.CircleGeometry(0.34 + (i % 3) * 0.09, 18, 0.25, Math.PI * 1.85), matNenufar);
+      hoja.rotation.x = -Math.PI / 2;
+      hoja.rotation.z = i * 0.9;
+      hoja.position.set(nx, 0.058, nz);
+      g.add(hoja);
+      if (i % 4 === 0) {
+        const flor = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.11, 7), matFlor);
+        flor.rotation.x = Math.PI;
+        flor.position.set(nx, 0.11, nz);
         g.add(flor);
       }
     }
 
-    // Puente pequeño junto al estanque
-    const matMadera = new THREE.MeshStandardMaterial({ color: 0x9b6e44, roughness: 0.75 });
-    const puente = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.18, 2.2), matMadera);
-    puente.position.set(est.x - est.r + 0.5, 0.16, est.z);
-    g.add(puente);
-
-    // Árboles distribuidos orgánicamente
-    const matTronco = new THREE.MeshStandardMaterial({ color: 0x5c4230, roughness: 0.9 });
-    const tonosHoja = [0x4c8a62, 0x62a376, 0x76b882, 0x3f7552].map((col) =>
-      new THREE.MeshStandardMaterial({ color: col, roughness: 0.8, flatShading: true })
-    );
+    // 4. Árboles botánicos realistas (corteza fotográfica + copas de hojas orgánicas, cero esferas low-poly)
     const arbolesPos = [
-      [-9, -12, 1.1], [-17, -18, 1.3], [-24, -29, 1.2], [-18, -42, 1.4], [-9, -49, 1.1],
-      [6, -12, 1.0], [15, -16, 1.25], [27, -25, 1.35], [28, -40, 1.2], [18, -50, 1.3],
-      [4, -55, 1.45], [-29, -46, 1.15], [-32, -20, 1.1], [31, -14, 1.05], [-3, -34, 0.95]
+      [-9.5, -12.0, 1.15], [9.2, -11.5, 1.05], [-13.5, -24.0, 1.3],
+      [-11.0, -35.5, 1.2], [9.5, -42.0, 1.25], [-5.2, -45.0, 1.15],
+      [6.8, -48.5, 1.1], [-16.5, -16.5, 1.0], [18.5, -16.0, 1.2],
+      [21.5, -36.5, 1.25], [-15.0, -42.0, 1.1], [15.5, -46.0, 1.05],
+      [-3.5, -54.0, 1.3], [11.5, -18.5, 0.95]
     ];
-    arbolesPos.forEach(([x, z, s], idx) => {
-      const arb = new THREE.Group();
-      const tronco = new THREE.Mesh(new THREE.CylinderGeometry(0.24 * s, 0.36 * s, 3.6 * s, 8), matTronco);
-      tronco.position.y = 1.8 * s;
-      arb.add(tronco);
-      const copa = new THREE.Mesh(new THREE.IcosahedronGeometry(2.1 * s, 1), tonosHoja[idx % tonosHoja.length]);
-      copa.position.y = 3.8 * s;
-      arb.add(copa);
-      arb.position.set(x, 0, z);
-      arb.userData = { copa, fase: Math.random() * 6.28 };
-      g.add(arb);
-      this.arboles.push(arb);
+    arbolesPos.forEach(([ax, az, esc], idx) => {
+      g.add(this._crearArbolRealista(ax, az, esc, idx));
     });
 
-    // Bancos y farolas
-    const matMetal = new THREE.MeshStandardMaterial({ color: 0x2d4238, metalness: 0.6, roughness: 0.3 });
-    [[-6, -19, 0.7], [7, -21, -0.7], [11, -35, -1.9], [-12, -37, 1.1]].forEach(([x, z, r]) => {
-      const b = new THREE.Group();
-      const as = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.1, 0.55), matMadera);
-      as.position.y = 0.45;
-      const resp = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.45, 0.08), matMadera);
-      resp.position.set(0, 0.75, -0.24);
-      b.add(as, resp);
-      b.position.set(x, 0, z);
-      b.rotation.y = r;
-      g.add(b);
-    });
-
-    const matGlobo = new THREE.MeshBasicMaterial({ color: 0xfff1ba });
-    [[-3.2, -9], [3.2, -9], [-9, -27], [9, -27], [0, -45]].forEach(([x, z]) => {
-      const poste = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 3.4, 8), matMetal);
-      poste.position.set(x, 1.7, z);
-      const globo = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), matGlobo);
-      globo.position.set(x, 3.5, z);
-      g.add(poste, globo);
-    });
-
-    // Flores de colores suaves
-    const coloresFlor = [0xffe066, 0xff9ebb, 0x9bf6ff, 0xffffff];
-    for (let i = 0; i < 70; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const d = 12 + Math.random() * 42;
-      const fx = cx + Math.cos(a) * d;
-      const fz = cz + Math.sin(a) * d;
-      if (Math.hypot(fx - est.x, fz - est.z) < est.r + 1) continue;
-      const fl = new THREE.Mesh(
-        new THREE.SphereGeometry(0.11, 6, 6),
-        new THREE.MeshBasicMaterial({ color: coloresFlor[i % coloresFlor.length] })
+    // 5. Flores silvestres y hojas caídas sobre el césped
+    const coloresFlor = [0xfff8dc, 0xffd97d, 0xf2c6de, 0xd8f3dc];
+    for (let i = 0; i < 65; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const rad = 6 + Math.random() * 28;
+      const fx = cx + Math.cos(ang) * rad;
+      const fz = cz + Math.sin(ang) * rad;
+      if (Math.hypot(fx - est.x, fz - est.z) < est.r + 1.4) continue;
+      if (Math.abs(fx) < 2.2 && fz > -46) continue;
+      const flor = new THREE.Mesh(
+        new THREE.CircleGeometry(0.08 + Math.random() * 0.06, 6),
+        new THREE.MeshStandardMaterial({ color: coloresFlor[i % coloresFlor.length], roughness: 0.7, side: THREE.DoubleSide })
       );
-      fl.position.set(fx, 0.12, fz);
-      g.add(fl);
+      flor.rotation.x = -Math.PI / 2;
+      flor.position.set(fx, 0.03, fz);
+      g.add(flor);
     }
 
-    // Esporas doradas flotantes
-    const nPart = 260;
+    // 6. Motas de polvo solar dorado flotando suavemente
+    const nPart = 420;
     const posArr = new Float32Array(nPart * 3);
     for (let i = 0; i < nPart * 3; i += 3) {
-      posArr[i] = cx + (Math.random() - 0.5) * 90;
-      posArr[i + 1] = 0.6 + Math.random() * 7;
-      posArr[i + 2] = cz + (Math.random() - 0.5) * 90;
+      posArr[i] = cx + (Math.random() - 0.5) * 76;
+      posArr[i + 1] = 0.4 + Math.random() * 6.5;
+      posArr[i + 2] = cz + (Math.random() - 0.5) * 76;
     }
     const pGeom = new THREE.BufferGeometry();
     pGeom.setAttribute("position", new THREE.BufferAttribute(posArr, 3));
     this.particulas = new THREE.Points(
       pGeom,
-      new THREE.PointsMaterial({ color: 0xffe48a, size: 0.16, transparent: true, opacity: 0.75 })
+      new THREE.PointsMaterial({
+        map: this.texBrillo, color: 0xffe896, size: 0.34,
+        transparent: true, opacity: 0.76, blending: THREE.AdditiveBlending, depthWrite: false
+      })
     );
     g.add(this.particulas);
 
+    this.grupoParque = g;
     this.scene.add(g);
+  }
+
+  _crearArbolRealista(x, z, escala = 1, seed = 0) {
+    const arbol = new THREE.Group();
+    arbol.position.set(x, 0, z);
+    arbol.scale.setScalar(escala);
+
+    // Tronco esculpido con base ensanchada y corteza fotográfica real
+    const tronco = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.24, 0.46, 4.4, 12),
+      this.mats.corteza
+    );
+    tronco.position.y = 2.15;
+    tronco.rotation.z = Math.sin(seed * 2.1) * 0.05;
+    tronco.castShadow = true;
+    tronco.receiveShadow = true;
+    arbol.add(tronco);
+
+    // Ramas principales que se abren orgánicamente
+    for (let b = 0; b < 4; b++) {
+      const ang = (b / 4) * Math.PI * 2 + seed * 0.7;
+      const rama = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.17, 2.5, 8),
+        this.mats.corteza
+      );
+      rama.position.set(Math.cos(ang) * 0.65, 4.2 + (b % 2) * 0.35, Math.sin(ang) * 0.65);
+      rama.rotation.z = -Math.cos(ang) * 0.65;
+      rama.rotation.x = Math.sin(ang) * 0.65;
+      rama.castShadow = true;
+      arbol.add(rama);
+    }
+
+    // Copa botánica formada por múltiples planos cruzados de hojas reales con alfa
+    const posicionesCopa = [
+      [0, 5.4, 0, 4.6], [-1.3, 4.8, 0.8, 3.6], [1.4, 4.9, -0.7, 3.7],
+      [0.4, 5.1, 1.3, 3.5], [-0.9, 5.3, -1.2, 3.4], [0.2, 6.2, 0.1, 3.8]
+    ];
+    posicionesCopa.forEach(([cx, cy, cz, tam], i) => {
+      for (let k = 0; k < 2; k++) {
+        const plano = new THREE.Mesh(new THREE.PlaneGeometry(tam, tam), this.mats.follaje);
+        plano.position.set(cx, cy, cz);
+        plano.rotation.y = (i * 0.9) + k * (Math.PI / 2);
+        plano.rotation.x = (k === 0 ? 0.18 : -0.15);
+        plano.castShadow = true;
+        plano.receiveShadow = true;
+        arbol.add(plano);
+      }
+    });
+
+    return arbol;
+  }
+
+  _crearBancoRoble() {
+    const banco = new THREE.Group();
+    // Listones de roble para asiento y respaldo
+    for (let i = 0; i < 4; i++) {
+      const liston = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.055, 0.11), this.mats.madera);
+      liston.position.set(0, 0.48, -0.17 + i * 0.125);
+      liston.castShadow = true; liston.receiveShadow = true;
+      banco.add(liston);
+    }
+    for (let i = 0; i < 3; i++) {
+      const resp = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.11, 0.05), this.mats.madera);
+      resp.position.set(0, 0.66 + i * 0.13, -0.26 - i * 0.025);
+      resp.rotation.x = -0.18;
+      resp.castShadow = true; resp.receiveShadow = true;
+      banco.add(resp);
+    }
+    // Patas y reposabrazos de hierro forjado oscuro
+    [-0.78, 0.78].forEach((px) => {
+      const pataF = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.48, 0.06), this.mats.hierro);
+      pataF.position.set(px, 0.24, 0.2); pataF.castShadow = true;
+      const pataB = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.98, 0.06), this.mats.hierro);
+      pataB.position.set(px, 0.49, -0.25); pataB.rotation.x = -0.12; pataB.castShadow = true;
+      const brazo = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.52), this.mats.hierro);
+      brazo.position.set(px, 0.66, -0.02); brazo.castShadow = true;
+      banco.add(pataF, pataB, brazo);
+    });
+    return banco;
+  }
+
+  _crearCarta(colorSello) {
+    const carta = new THREE.Group();
+    const hoja = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.012, 0.31), this.mats.papel);
+    hoja.castShadow = true; hoja.receiveShadow = true;
+    const sello = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.026, 0.026, 0.016, 16),
+      new THREE.MeshStandardMaterial({ color: colorSello, roughness: 0.35, metalness: 0.1, emissive: colorSello, emissiveIntensity: 0.35 })
+    );
+    sello.position.set(0, 0.008, 0.03);
+    carta.add(hoja, sello);
+    return carta;
+  }
+
+  _crearHojaOrganica(colorHex) {
+    const h = new THREE.Mesh(
+      new THREE.CircleGeometry(0.11, 7),
+      new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.65, side: THREE.DoubleSide })
+    );
+    h.scale.set(1.45, 0.72, 1);
+    h.rotation.x = -Math.PI / 2;
+    return h;
   }
 
   _construirLumen() {
     const g = new THREE.Group();
-    const core = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 18), new THREE.MeshBasicMaterial({ color: 0xfff8d6 }));
-    const halo = new THREE.Mesh(new THREE.SphereGeometry(0.46, 16, 16), new THREE.MeshBasicMaterial({ color: 0xf2c45a, transparent: true, opacity: 0.35 }));
+    const core = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: this.texBrillo, color: 0xfff8d6, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    core.scale.set(0.95, 0.95, 1);
+    const halo = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: this.texBrillo, color: 0xf6cf6b, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    halo.scale.set(1.9, 1.9, 1);
     const anillo = new THREE.Mesh(
-      new THREE.RingGeometry(0.52, 0.6, 24),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, side: THREE.DoubleSide })
+      new THREE.RingGeometry(0.42, 0.48, 36),
+      new THREE.MeshBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0.55, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
     );
     anillo.rotation.x = Math.PI / 2.4;
     g.add(core, halo, anillo);
@@ -956,29 +1452,184 @@ class Juego {
     this._actualizarContador();
   }
 
+  // Recuerdo integrado físicamente en un objeto real del parque (banco, árbol, carta, farol, barquito, hojas)
   _crearOrbe(h) {
     const emo = CONFIG.emociones[h.emocion] || CONFIG.emociones.gratitud;
     const g = new THREE.Group();
-    const y = h.pos.y || 1.7;
-    g.position.set(h.pos.x, y, h.pos.z);
+    g.position.set(h.pos.x, 0, h.pos.z);
 
-    const nucleo = new THREE.Mesh(new THREE.SphereGeometry(0.36, 16, 16), new THREE.MeshBasicMaterial({ color: emo.luz }));
-    const halo = new THREE.Mesh(new THREE.SphereGeometry(0.68, 14, 14), new THREE.MeshBasicMaterial({ color: emo.luz, transparent: true, opacity: 0.32 }));
-    const anillo = new THREE.Mesh(
-      new THREE.RingGeometry(0.76, 0.88, 22),
-      new THREE.MeshBasicMaterial({ color: emo.luz, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
-    );
-    anillo.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.5;
-    const haz = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.03, 0.14, y, 6),
-      new THREE.MeshBasicMaterial({ color: emo.luz, transparent: true, opacity: 0.16 })
-    );
-    haz.position.y = -y / 2;
+    let luzY = 0.75;
+    let flotante = null;
+    const tipo = h.objeto || "carta_hojas";
 
-    g.add(nucleo, halo, anillo, haz);
+    if (tipo === "banco_carta" || tipo === "banco_cuaderno" || tipo === "banco_horizonte") {
+      const banco = this._crearBancoRoble();
+      banco.rotation.y = tipo === "banco_horizonte" ? 0 : (h.pos.x > 0 ? -Math.PI / 2.2 : Math.PI / 2.2);
+      g.add(banco);
+
+      const reliquia = this._crearCarta(emo.luz);
+      reliquia.position.set(0.22, 0.525, 0.02);
+      reliquia.rotation.y = 0.32;
+      banco.add(reliquia);
+
+      // Hojas caídas alrededor del banco
+      for (let i = 0; i < 5; i++) {
+        const hoja = this._crearHojaOrganica(i % 2 === 0 ? 0xd99b43 : 0xc46d3b);
+        hoja.position.set((Math.random() - 0.5) * 1.9, 0.025, (Math.random() - 0.5) * 1.5);
+        hoja.rotation.z = Math.random() * 6;
+        g.add(hoja);
+      }
+      luzY = 0.85;
+    } else if (tipo === "roble_nota") {
+      const arbol = this._crearArbolRealista(0, 0, 1.25, 7);
+      g.add(arbol);
+      const nota = this._crearCarta(emo.luz);
+      nota.position.set(0.32, 1.38, 0.28);
+      nota.rotation.set(Math.PI / 2, 0, -0.55);
+      g.add(nota);
+      for (let i = 0; i < 8; i++) {
+        const hoja = this._crearHojaOrganica(i % 2 === 0 ? 0xe08e45 : 0xb85c38);
+        const a = (i / 8) * Math.PI * 2;
+        hoja.position.set(Math.cos(a) * (0.8 + Math.random() * 0.8), 0.03, Math.sin(a) * (0.8 + Math.random() * 0.8));
+        g.add(hoja);
+      }
+      luzY = 1.45;
+    } else if (tipo === "muelle_farol") {
+      // Pequeño muelle de madera hacia el estanque + farol cálido de cristal
+      for (let i = 0; i < 7; i++) {
+        const tabla = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.07, 0.34), this.mats.madera);
+        tabla.position.set(0.4 + i * 0.38, 0.24, 0);
+        tabla.rotation.y = Math.PI / 2;
+        tabla.castShadow = true; tabla.receiveShadow = true;
+        g.add(tabla);
+      }
+      const farol = new THREE.Group();
+      const baseF = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.06, 12), this.mats.hierro);
+      const cristalF = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.11, 0.11, 0.28, 12),
+        new THREE.MeshStandardMaterial({ color: 0xfff5d6, emissive: emo.luz, emissiveIntensity: 0.9, transparent: true, opacity: 0.88 })
+      );
+      cristalF.position.y = 0.17;
+      const tapaF = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.1, 12), this.mats.hierro);
+      tapaF.position.y = 0.35;
+      farol.add(baseF, cristalF, tapaF);
+      farol.position.set(1.2, 0.3, 0.45);
+      g.add(farol);
+      luzY = 0.72;
+    } else if (tipo === "barco_papel") {
+      // Barquito de papel origami flotando sobre el agua
+      const barco = new THREE.Group();
+      const casco = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.14, 4), this.mats.papel);
+      casco.rotation.x = Math.PI; casco.scale.set(1.4, 1, 0.7);
+      const vela = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.24, 3), this.mats.papel);
+      vela.position.y = 0.13;
+      barco.add(casco, vela);
+      barco.position.set(0, 0.12, 0);
+      g.add(barco);
+      flotante = barco;
+      luzY = 0.45;
+    } else if (tipo === "tocon_altavoz") {
+      // Tocón con corteza real + pequeño altavoz acústico retro
+      const tocon = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.52, 0.56, 14), this.mats.corteza);
+      tocon.position.y = 0.28; tocon.castShadow = true; tocon.receiveShadow = true;
+      const altavoz = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.22, 0.16), this.mats.madera);
+      altavoz.position.set(0, 0.67, 0); altavoz.rotation.y = -0.45; altavoz.castShadow = true;
+      const cono = new THREE.Mesh(new THREE.CircleGeometry(0.075, 16), this.mats.hierro);
+      cono.position.set(0, 0.67, 0.085); cono.rotation.y = -0.45;
+      g.add(tocon, altavoz, cono);
+      luzY = 0.95;
+    } else if (tipo === "estanque_nenufar") {
+      // Piedras lisas de orilla + nenúfar luminoso con flor de loto
+      const roca = new THREE.Mesh(new THREE.DodecahedronGeometry(0.45, 1), this.mats.piedra);
+      roca.scale.set(1.4, 0.48, 1.1); roca.position.set(-0.3, 0.14, 0);
+      roca.castShadow = true; roca.receiveShadow = true;
+      const hojaN = new THREE.Mesh(
+        new THREE.CircleGeometry(0.46, 20, 0.2, Math.PI * 1.85),
+        new THREE.MeshStandardMaterial({ color: 0x3f8a4b, roughness: 0.4, side: THREE.DoubleSide })
+      );
+      hojaN.rotation.x = -Math.PI / 2; hojaN.position.set(0.55, 0.07, 0.1);
+      const loto = new THREE.Mesh(
+        new THREE.ConeGeometry(0.15, 0.14, 7),
+        new THREE.MeshStandardMaterial({ color: 0xfff0f5, emissive: emo.luz, emissiveIntensity: 0.45 })
+      );
+      loto.rotation.x = Math.PI; loto.position.set(0.55, 0.16, 0.1);
+      g.add(roca, hojaN, loto);
+      flotante = loto;
+      luzY = 0.55;
+    } else {
+      // Piedra plana de jardín + carta/sobre manuscrito + hojas otoñales (sobre_sendero, piedras_hojas o huella nueva)
+      const piedra = new THREE.Mesh(new THREE.DodecahedronGeometry(0.46, 1), this.mats.piedra);
+      piedra.scale.set(1.35, 0.42, 1.15);
+      piedra.position.y = 0.14;
+      piedra.castShadow = true; piedra.receiveShadow = true;
+      g.add(piedra);
+
+      const carta = this._crearCarta(emo.luz);
+      carta.position.set(0, 0.34, 0);
+      carta.rotation.y = 0.4;
+      g.add(carta);
+
+      for (let i = 0; i < 6; i++) {
+        const hoja = this._crearHojaOrganica(i % 2 === 0 ? 0xe0a94d : 0x76a856);
+        const a = (i / 6) * Math.PI * 2;
+        hoja.position.set(Math.cos(a) * 0.72, 0.025, Math.sin(a) * 0.72);
+        hoja.rotation.z = a;
+        g.add(hoja);
+      }
+      luzY = 0.68;
+    }
+
+    // Luz integrada suavemente en el objeto (halo etéreo + partículas + punto de luz local)
+    const auraGrupo = new THREE.Group();
+    auraGrupo.position.y = luzY;
+
+    const spriteCore = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: this.texBrillo, color: 0xffffff, transparent: true, opacity: 0.72,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      })
+    );
+    spriteCore.scale.set(0.48, 0.48, 1);
+
+    const halo = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: this.texBrillo, color: emo.luz, transparent: true, opacity: 0.56,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      })
+    );
+    halo.scale.set(1.45, 1.45, 1);
+
+    // Hitbox invisible generosa para interactuar fácilmente con [E]
+    const nucleo = new THREE.Mesh(
+      new THREE.SphereGeometry(0.85, 8, 8),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    auraGrupo.add(spriteCore, halo, nucleo);
+
+    // Motas doradas/luciérnagas naciendo desde el objeto
+    const nP = 18;
+    const pPos = new Float32Array(nP * 3);
+    for (let i = 0; i < nP * 3; i += 3) {
+      pPos[i] = (Math.random() - 0.5) * 1.15;
+      pPos[i + 1] = Math.random() * 1.25 - 0.2;
+      pPos[i + 2] = (Math.random() - 0.5) * 1.15;
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
+    const pMat = new THREE.PointsMaterial({
+      map: this.texBrillo, color: emo.luz, size: 0.2,
+      transparent: true, opacity: 0.82, blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    const polvo = new THREE.Points(pGeo, pMat);
+    auraGrupo.add(polvo);
+
+    g.add(auraGrupo);
     this.scene.add(g);
 
-    const obj = { id: h.id, datos: h, grupo: g, nucleo, halo, anillo, baseY: y, fase: Math.random() * 6.28 };
+    const obj = {
+      id: h.id, datos: h, grupo: g, auraGrupo, flotante,
+      nucleo, halo, spriteCore, polvo, baseY: luzY, fase: Math.random() * 6.28
+    };
     this.orbes.push(obj);
     return obj;
   }
@@ -1000,11 +1651,18 @@ class Juego {
     this.dom.pantallaTitulo.classList.add("salir");
     setTimeout(() => this.dom.pantallaTitulo.classList.add("oculto"), 1400);
 
+    this._mostrarEscena("PARQUE");
+    if (this.mat360 && this.texturaParque) {
+      this.mat360.map = this.texturaParque;
+      this.mat360.needsUpdate = true;
+      this.scene.background = this.texturaParque;
+    }
+
     this.celularEntregado = true;
     this.puertasAbiertas = true;
     this.aperturaT = 1;
-    this.puertaIzq.position.x = -5.1;
-    this.puertaDer.position.x = 5.1;
+    this.puertaIzq.position.x = -3.55;
+    this.puertaDer.position.x = 3.55;
     this.manoGrupo.visible = false;
     this.lumen.visible = true;
     this.lumen.position.set(4, 2.1, -18);
@@ -1022,7 +1680,7 @@ class Juego {
     this.dom.pantallaTitulo.classList.add("salir");
     setTimeout(() => this.dom.pantallaTitulo.classList.add("oculto"), 1400);
 
-    // Acto I: Aislamiento en el cuarto
+    // Acto I: Aislamiento y sobrecarga sensorial en la habitación 2050 (Fotósfera 360 pura, sin cortes)
     this.estado = "CINE";
     this.cineAbort = new AbortController();
     const sig = this.cineAbort.signal;
@@ -1032,57 +1690,70 @@ class Juego {
     this.dom.glitch.classList.add("activo");
     this.audio.modoAislamiento(true);
 
-    // Oscurecer luz ambiente para el cuarto
-    this.scene.background.setHex(0x161f24);
-    this.scene.fog.color.setHex(0x161f24);
-    this.hemi.intensity = 0.45;
-    this.sol.intensity = 0.2;
+    this._mostrarEscena("HABITACION");
+    if (this.mat360 && this.texturaHabitacion) {
+      this.mat360.map = this.texturaHabitacion;
+      this.mat360.needsUpdate = true;
+      this.scene.background = this.texturaHabitacion;
+    }
+
+    this.hemi.intensity = 0.65;
+    this.sol.intensity = 0.4;
 
     this.camera.up.set(0, 1, 0);
-    this.camera.position.set(80, 1.55, 1.5);
-    this.yaw = 0.1; this.pitch = -0.15;
-    this.camera.rotation.set(-0.15, 0.1, 0, "YXZ");
+    this.camera.position.set(0, 1.55, 0);
+    this.yaw = 0; this.pitch = -0.04;
+    this.camera.rotation.set(-0.04, 0, 0, "YXZ");
     this._aplicarRotacion();
     this.manoGrupo.visible = true;
     this._dibujarPantalla("aislamiento");
 
     try {
-      await this._mostrarCapitulo("ACTO I", "EL RUIDO", sig);
+      await this._mostrarCapitulo("2050", "LA SOBRECARGA", sig);
 
-      // Lanzar lluvia de notificaciones mientras corren los subtítulos
+      // Ráfaga acelerada de notificaciones neuronales (~5.5s de caos)
+      let count = 0;
       const notifTimer = setInterval(() => {
-        if (sig.aborted) { clearInterval(notifTimer); return; }
+        if (sig.aborted || count >= 10) { clearInterval(notifTimer); return; }
         this._spawnNotif();
-      }, 950);
+        this.audio.tocarNotif();
+        count++;
+      }, 480);
 
-      for (const linea of CONFIG.guion.aislamiento) {
-        await this._subtitulo(linea.t, linea.d, sig);
-      }
+      for (const l of CONFIG.guion.aislamiento) await this._subtitulo(l.t, l.d, sig);
       clearInterval(notifTimer);
-      this._limpiarNotifs();
 
-      // Llega el mensaje de la madre
+      // Silencio súbito: el ruido digital colapsa
+      this._limpiarNotifs();
+      this.audio.modoAislamiento(false);
+      this.dom.glitch.classList.remove("activo");
+
+      // Notificación salvadora de la madre
       this._dibujarPantalla("madre");
-      this.audio.tocarNotif();
-      this._spawnNotif({ ico: "💬", col: "#25a35a", t: "Mamá", s: "Ve al parque. Te va a hacer bien. ❤" }, true);
-      await this._esperar(1200, sig);
-      await this._subtitulo(CONFIG.guion.mensajeMadre, 4600, sig);
+      this.audio.tocarCampana();
+      this._spawnNotif({ ico: "❤", col: "#25a35a", t: "Mamá", s: "Hay un parque donde dejas el celular como llave. Ve. Te va a hacer bien." }, true);
+      await this._subtitulo(CONFIG.guion.mensajeMadre, 3600, sig);
       for (const l of CONFIG.guion.decision) await this._subtitulo(l.t, l.d, sig);
     } catch (_) {
       // Saltado por el usuario
       this._limpiarNotifs();
     }
 
-    // Transición al Acto II (El Umbral)
-    await this._fundido(true, true);
+    // Transición al Acto II (El Umbral del Santuario)
+    await this._fundido(true, false);
     document.body.classList.remove("cine");
     this.dom.vineta.classList.remove("activa");
     this.dom.glitch.classList.remove("activo");
     this.dom.subtitulos.classList.remove("visible");
 
-    // Restaurar luz diurna
-    this.scene.background.setHex(0xdcf0f5);
-    this.scene.fog.color.setHex(0xdcf0f5);
+    // Mostrar pabellón del umbral y panorama 360 del parque
+    this._mostrarEscena("UMBRAL");
+    if (this.mat360 && this.texturaParque) {
+      this.mat360.map = this.texturaParque;
+      this.mat360.needsUpdate = true;
+      this.scene.background = this.texturaParque;
+    }
+
     this.hemi.intensity = 1.15;
     this.sol.intensity = 1.25;
     this.audio.modoAislamiento(false);
@@ -1095,12 +1766,12 @@ class Juego {
     this._dibujarPantalla("aislamiento");
     this.manoGrupo.visible = true;
 
-    await this._fundido(false, true);
+    await this._fundido(false, false);
 
     this.estado = "UMBRAL";
     this.puedeMoverse = true;
     this.dom.hud.classList.add("visible");
-    this._setObjetivo("ACTO II · EL UMBRAL", "Deja tu celular en la caja", "Acércate al pedestal y pulsa [E]");
+    this._setObjetivo("ACTO II · EL UMBRAL", "El celular es la llave", "Acércate al pedestal y pulsa [E] para depositarlo");
 
     for (const l of CONFIG.guion.viaje) {
       if (this.celularEntregado) break;
@@ -1113,14 +1784,14 @@ class Juego {
     const el = document.createElement("div");
     el.className = "notif";
     el.style.left = centrada ? "calc(50% - 145px)" : `${6 + Math.random() * 68}%`;
-    el.style.top = centrada ? "20%" : `${12 + Math.random() * 58}%`;
+    el.style.top = centrada ? "22%" : `${12 + Math.random() * 58}%`;
     el.innerHTML = `<div class="ico" style="background:${n.col}">${n.ico}</div><div><b>${n.t}</b><small>${n.s}</small></div>`;
     this.dom.notifs.appendChild(el);
     this.audio.tocarNotif();
     setTimeout(() => {
       el.classList.add("salir");
       setTimeout(() => el.remove(), 600);
-    }, centrada ? 4200 : 2800);
+    }, centrada ? 4200 : 2600);
   }
 
   _limpiarNotifs() {
@@ -1134,54 +1805,119 @@ class Juego {
     this.puedeMoverse = false;
     this.dom.prompt.classList.remove("visible");
     this.dom.mira.classList.remove("foco");
+    this.dom.subtitulos.classList.remove("visible");
 
-    // Animar la mano bajando hacia el pedestal
-    const dur = 1100;
-    const t0 = performance.now();
-    const p0 = this.manoGrupo.position.clone();
-    await new Promise((res) => {
+    // Helper para animaciones suavizadas
+    const animar = (ms, fn) => new Promise((res) => {
+      const t0 = performance.now();
       const paso = (now) => {
-        const k = Math.min(1, (now - t0) / dur);
-        const e = k * (2 - k);
-        this.manoGrupo.position.set(p0.x - 0.24 * e, p0.y - 0.26 * e, p0.z - 0.35 * e);
+        const k = Math.min(1, (now - t0) / ms);
+        const ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        fn(k, ease);
         if (k < 1) requestAnimationFrame(paso);
         else res();
       };
       requestAnimationFrame(paso);
     });
 
-    this.manoGrupo.visible = false;
-    this.camera.remove(this.manoGrupo);
-    this._dibujarPantalla("reposo");
+    // Fase 1: Enfocar suavemente la cámara hacia el pedestal y acercar la mano
+    const camPos0 = this.camera.position.clone();
+    const camPosObj = new THREE.Vector3(0, 1.56, 1.55);
+    const yaw0 = this.yaw, pitch0 = this.pitch;
+    const manoP0 = this.manoGrupo.position.clone();
 
-    // Celular descansando sobre el pedestal
-    const celFijo = new THREE.Mesh(
-      new THREE.BoxGeometry(0.14, 0.014, 0.25),
-      new THREE.MeshStandardMaterial({ color: 0x202825 })
+    await animar(650, (k, e) => {
+      this.camera.position.lerpVectors(camPos0, camPosObj, e);
+      this.yaw = yaw0 * (1 - e);
+      this.pitch = pitch0 + (-0.28 - pitch0) * e;
+      this._aplicarRotacion();
+      this.manoGrupo.position.set(
+        manoP0.x * (1 - e * 0.7),
+        manoP0.y - 0.08 * e,
+        manoP0.z - 0.24 * e
+      );
+    });
+
+    // Crear el celular 3D independiente para la animación visible de inserción en la ranura
+    const celAnim = new THREE.Group();
+    const chasis = new THREE.Mesh(
+      new THREE.BoxGeometry(0.145, 0.27, 0.014),
+      new THREE.MeshStandardMaterial({ color: 0x161d1a, metalness: 0.85, roughness: 0.18 })
     );
-    celFijo.position.set(0, 1.04, 0.2);
-    const pantFija = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.13, 0.24),
+    const pantMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.132, 0.254),
       new THREE.MeshBasicMaterial({ map: this.pantallaTex })
     );
-    pantFija.rotation.x = -Math.PI / 2;
-    pantFija.position.set(0, 1.049, 0.2);
-    this.scene.add(celFijo, pantFija);
+    pantMesh.position.z = 0.008;
+    celAnim.add(chasis, pantMesh);
+    celAnim.position.set(0.08, 1.38, 0.72);
+    celAnim.rotation.set(-0.35, -0.18, 0.08);
+    this.scene.add(celAnim);
 
-    this.audio.tocarCampana();
+    this.manoGrupo.visible = false;
+    this.camera.remove(this.manoGrupo);
 
-    // Acto III: Aparece Lumen y da el tutorial
+    // Fase 2: El celular vuela suavemente sobre la ranura iluminada y se alinea verticalmente
+    await animar(550, (k, e) => {
+      celAnim.position.set(
+        0.08 * (1 - e),
+        1.38 + Math.sin(k * Math.PI) * 0.12 + 0.04 * e,
+        0.72 + (0.2 - 0.72) * e
+      );
+      celAnim.rotation.set(-0.35 * (1 - e), -0.18 * (1 - e), 0.08 * (1 - e));
+    });
+
+    // Fase 3: El celular desciende lentamente DENTRO de la ranura y se guarda como llave
+    await animar(650, (k, e) => {
+      celAnim.position.y = 1.42 - 0.44 * e; // Entra y se hunde casi por completo en el monolito
+      if (k > 0.55) this._dibujarPantalla("reposo");
+    });
+
+    // Pestillo electromagnético + cambio de luz a verde esmeralda + onda expansiva
+    this.audio.tocarLlaveBloqueo();
+    if (this.anilloLlave) this.anilloLlave.material.color.setHex(0x33ff99);
+    if (this.ranuraLuz) this.ranuraLuz.material.color.setHex(0x33ff99);
+    if (this.puertaIzq && this.puertaIzq.userData.tiraLuz) this.puertaIzq.userData.tiraLuz.material.color.setHex(0x33ff99);
+    if (this.puertaDer && this.puertaDer.userData.tiraLuz) this.puertaDer.userData.tiraLuz.material.color.setHex(0x33ff99);
+    if (this.luzTotem) {
+      this.luzTotem.color.setHex(0x33ff99);
+      this.luzTotem.intensity = 2.4;
+    }
+    this.pulsoT = 0; // Dispara la onda luminosa expansiva en _loop()
+
+    await this._esperar(380);
+
+    // Fase 4: Las compuertas se abren y la luz dorada del parque inunda el interior
+    if (this.cartelUmbral) this.cartelUmbral.visible = false;
+    this.puertasAbiertas = true;
+    this.audio.tocarPuerta();
+    if (this.dom.destelloLuz) this.dom.destelloLuz.classList.add("activo");
+
+    // Elevar suavemente la mirada hacia las puertas que se abren con el resplandor entrando
+    await animar(1250, (k, e) => {
+      this.pitch = -0.28 + (0.04 - (-0.28)) * e;
+      this.camera.fov = 66 + Math.sin(k * Math.PI) * 3.5;
+      this.camera.updateProjectionMatrix();
+      this._aplicarRotacion();
+    });
+    if (this.dom.destelloLuz) this.dom.destelloLuz.classList.remove("activo");
+
+    // Acto III: Lumen emerge suavemente de la luz dorada con diálogo centrado y resumido
     this.lumen.visible = true;
-    this.lumen.position.set(0, 1.65, -2.2);
+    this.lumen.position.set(0, 1.65, -2.5);
+    this.lumen.scale.set(0.01, 0.01, 0.01);
+    await animar(550, (k, e) => {
+      const s = 0.01 + 0.99 * e;
+      this.lumen.scale.set(s, s, s);
+    });
+
     this.estado = "TUTORIAL";
-    this._setObjetivo("ACTO III · BIENVENIDA", "Escucha a Lumen", "Pulsa [E] para avanzar el diálogo");
+    this._setObjetivo("ACTO III · LUMEN", "Escucha la bienvenida", "Pulsa [E] para avanzar");
 
     this._iniciarDialogo(CONFIG.guion.tutorial, () => {
-      this.puertasAbiertas = true;
-      this.audio.tocarPuerta();
       Almacen.guardarProgreso({ historiaCompleta: true });
       this._entrarModoParque();
-      this._mostrarCapitulo("ACTO IV", "EL PARQUE DE LAS HUELLAS", new AbortController().signal).catch(() => {});
+      this._mostrarCapitulo("SANTUARIO", "EL PARQUE DE LAS MEMORIAS", new AbortController().signal).catch(() => {});
     });
   }
 
@@ -1190,7 +1926,7 @@ class Juego {
     this.puedeMoverse = true;
     this.dom.hud.classList.add("visible");
     this.dom.btnNuevaHuella.classList.remove("oculto");
-    this._setObjetivo("EXPLORA EL PARQUE", "Acércate a las luces y pulsa [E]", "Cuando quieras, pulsa [N] para dejar tu propia huella");
+    this._setObjetivo("SANTUARIO DE DESCONEXIÓN", "Recorre los senderos y pulsa [E]", "Pulsa [N] cuando quieras dejar tu propia memoria");
   }
 
   /* ------------------------------------------------------------------------
@@ -1209,17 +1945,22 @@ class Juego {
     const linea = this.dlgCola[this.dlgIdx];
     this.dom.dlgTexto.textContent = "";
     this.dom.dlgPie.classList.remove("listo");
+    if (this.dom.dlgProgreso) {
+      this.dom.dlgProgreso.innerHTML = this.dlgCola
+        .map((_, idx) => `<span class="${idx === this.dlgIdx ? "activo" : ""}"></span>`)
+        .join("");
+    }
     this.dlgEscribiendo = true;
     let i = 0;
     this.dlgTimer = setInterval(() => {
       this.dom.dlgTexto.textContent += linea[i++];
-      if (i % 3 === 0) this.audio.tocarLumenVoz();
+      if (i % 4 === 0) this.audio.tocarLumenVoz();
       if (i >= linea.length) {
         clearInterval(this.dlgTimer);
         this.dlgEscribiendo = false;
         this.dom.dlgPie.classList.add("listo");
       }
-    }, 24);
+    }, 15);
   }
 
   _avanzarDialogo() {
@@ -1410,9 +2151,11 @@ class Juego {
 
     this.dom.mhChip.textContent = `${emo.simbolo} ${emo.label}`;
     this.dom.mhChip.style.background = emo.hex;
+    if (this.dom.mhCaja) this.dom.mhCaja.style.setProperty("--emo-color", emo.hex);
+    if (this.dom.mhLugar) this.dom.mhLugar.textContent = h.lugar || "Rincón del santuario";
     this.dom.mhTitulo.textContent = h.titulo;
     this.dom.mhMeta.textContent = `${h.autor} · ${h.fecha || "2050"}`;
-    this.dom.mhTexto.textContent = `“${h.texto}”`;
+    this.dom.mhTexto.textContent = h.texto;
     this.dom.mhCancion.textContent = h.cancion || "";
     this.dom.mhYtLink.href = YT.enlace(h.youtubeId);
 
@@ -1439,7 +2182,6 @@ class Juego {
   }
 
   _cerrarModalHuella() {
-    const h = this.huellaActiva;
     this.dom.mhYt.innerHTML = "";
     this.dom.mhAudio.pause();
     this.dom.mhAudio.src = "";
@@ -1447,16 +2189,24 @@ class Juego {
     this.audio.silenciar(false);
     this.estado = "PARQUE";
     this.puedeMoverse = true;
-    this.ultimoMouse = null;
-
-    if (h) {
-      this._mostrarResonancia(h);
-    }
+    this._reactivarCamara();
 
     if (!this.tresCelebrado && this.escuchadas.size >= 3) {
       this.tresCelebrado = true;
       this._toast(CONFIG.guion.tresEscuchadas, 7500);
       this._setObjetivo("TU TURNO", "Pulsa [N] para dejar tu huella", "Busca una canción en YouTube y cuenta lo que sientes");
+    }
+  }
+
+  _reactivarCamara() {
+    this.ultimoMouse = null;
+    try { window.focus(); } catch (_) {}
+    try { this.dom.canvas.focus({ preventScroll: true }); } catch (_) {}
+    if (!this.pointerLock && (this.estado === "UMBRAL" || this.estado === "PARQUE")) {
+      try {
+        const p = this.dom.canvas.requestPointerLock();
+        if (p && p.catch) p.catch(() => {});
+      } catch (_) {}
     }
   }
 
@@ -1567,7 +2317,7 @@ class Juego {
     this.dom.modalCrear.classList.remove("abierto");
     this.estado = "PARQUE";
     this.puedeMoverse = true;
-    this.ultimoMouse = null;
+    this._reactivarCamara();
   }
 
   _abrirPausa() {
@@ -1583,7 +2333,7 @@ class Juego {
     this.dom.modalPausa.classList.remove("abierto");
     this.estado = this.estadoPrevioPausa || "PARQUE";
     this.puedeMoverse = this.estado !== "TUTORIAL";
-    this.ultimoMouse = null;
+    this._reactivarCamara();
   }
 
   async _lanzarEpilogo() {
@@ -1633,7 +2383,6 @@ class Juego {
         if (this.dom.modalHuella.classList.contains("abierto")) this._cerrarModalHuella();
         else if (this.dom.modalCrear.classList.contains("abierto")) this._cerrarModalCrear();
         else if (this.dom.modalPausa.classList.contains("abierto")) this._cerrarPausa();
-        else if (this.dom.resonancia.classList.contains("activo")) this._ocultarResonancia();
         else if (this.estado === "UMBRAL" || this.estado === "PARQUE") this._abrirPausa();
       }
     });
@@ -1728,31 +2477,74 @@ class Juego {
       this._actualizarBrujula();
     }
 
-    // Apertura de puertas
-    if (this.puertasAbiertas && this.aperturaT < 1) {
-      this.aperturaT = Math.min(1, this.aperturaT + dt * 0.9);
-      const e = this.aperturaT * (2 - this.aperturaT);
-      this.puertaIzq.position.x = -2.3 - e * 2.8;
-      this.puertaDer.position.x = 2.3 + e * 2.8;
+    // Movimiento suave orgánico en la habitación (Acto I) para mayor inmersión
+    if (this.estado === "CINE") {
+      this.yaw = Math.sin(t * 0.32) * 0.14;
+      this.pitch = -0.04 + Math.sin(t * 0.65) * 0.025;
+      this._aplicarRotacion();
+      if (this.manoGrupo && this.manoGrupo.visible) {
+        this.manoGrupo.position.y = -0.2 + Math.sin(t * 2.2) * 0.008;
+      }
     }
 
-    // Lumen flotando
+    // Apertura de puertas + iluminación dorada entrando hacia el interior del pabellón
+    if (this.puertasAbiertas && this.aperturaT < 1) {
+      this.aperturaT = Math.min(1, this.aperturaT + dt * 0.68);
+      const e = this.aperturaT < 0.5
+        ? 2 * this.aperturaT * this.aperturaT
+        : 1 - Math.pow(-2 * this.aperturaT + 2, 2) / 2;
+      this.puertaIzq.position.x = -1.2 - e * 2.35;
+      this.puertaDer.position.x = 1.2 + e * 2.35;
+      if (this.hazLuz) {
+        const intensidadHaz = Math.sin(this.aperturaT * Math.PI * 0.85) * 0.42 + e * 0.16;
+        this.hazLuz.children.forEach((m) => { m.material.opacity = intensidadHaz; });
+      }
+      if (this.luzPortal) {
+        this.luzPortal.intensity = e * 2.6;
+      }
+    }
+
+    // Onda expansiva luminosa del pedestal al encajar la llave celular
+    if (this.pulsoT >= 0 && this.pulsoT < 1 && this.anilloPulso) {
+      this.pulsoT = Math.min(1, this.pulsoT + dt * 1.15);
+      const s = 1 + this.pulsoT * 10.5;
+      this.anilloPulso.scale.set(s, s, 1);
+      this.anilloPulso.material.opacity = (1 - this.pulsoT) * 0.85;
+    }
+
+    // Lumen flotando suavemente
     if (this.lumen && this.lumen.visible) {
       this.lumen.position.y = 1.68 + Math.sin(t * 2.2) * 0.12;
       this.lumen.userData.anillo.rotation.z += dt * 1.1;
-      const sc = 1 + Math.sin(t * 3) * 0.1;
-      this.lumen.userData.halo.scale.set(sc, sc, sc);
+      const sc = 1.9 + Math.sin(t * 2.8) * 0.22;
+      this.lumen.userData.halo.scale.set(sc, sc, 1);
     }
 
-    // Árboles, partículas y orbes
-    this.arboles.forEach((a) => {
-      a.userData.copa.rotation.z = Math.sin(t * 1.2 + a.userData.fase) * 0.035;
-    });
-    if (this.particulas) this.particulas.rotation.y = t * 0.014;
+    // Esfera 360 infinita: sigue la posición de la cámara
+    if (this.esfera360) this.esfera360.position.copy(this.camera.position);
+
+    // Partículas solares y auras integradas en los objetos del parque (bancos, cartas, farol, barquito)
+    if (this.particulas) this.particulas.rotation.y = t * 0.012;
     this.orbes.forEach((o) => {
-      o.grupo.position.y = o.baseY + Math.sin(t * 1.4 + o.fase) * 0.16;
-      o.anillo.rotation.z += dt * 0.65;
+      if (o.auraGrupo) o.auraGrupo.position.y = o.baseY + Math.sin(t * 1.6 + o.fase) * 0.07;
+      if (o.flotante) {
+        o.flotante.position.y = 0.14 + Math.sin(t * 2.1 + o.fase) * 0.03;
+        o.flotante.rotation.z = Math.sin(t * 1.4 + o.fase) * 0.08;
+      }
+      if (o.polvo) o.polvo.rotation.y = t * 0.24;
+      if (o.halo) {
+        const hs = 1.38 + Math.sin(t * 2.2 + o.fase) * 0.22;
+        o.halo.scale.set(hs, hs, 1);
+      }
     });
+
+    // Anillo y ranura de la esclusa pulsando en ámbar/coral antes de entregar el celular
+    if (this.anilloLlave && !this.celularEntregado) {
+      const p = 0.48 + Math.sin(t * 4.2) * 0.36;
+      this.anilloLlave.material.opacity = p;
+      if (this.ranuraLuz) this.ranuraLuz.material.opacity = 0.55 + Math.sin(t * 4.2) * 0.38;
+      if (this.luzTotem) this.luzTotem.intensity = 0.75 + Math.sin(t * 4.2) * 0.35;
+    }
 
     // Pájaros aleatorios
     if (this.estado === "PARQUE" && t > this.proximoPajaro) {
@@ -1834,7 +2626,7 @@ class Juego {
       this.focoCaja = d < 3.8;
       this.dom.mira.classList.toggle("foco", this.focoCaja);
       this.dom.prompt.classList.toggle("visible", this.focoCaja);
-      this.dom.promptTxt.innerHTML = `Presiona <kbd>E</kbd> para dejar tu celular`;
+      this.dom.promptTxt.innerHTML = `Presiona <kbd>E</kbd> para encajar tu celular como llave`;
       this.dom.etiqOrbe.classList.remove("visible");
       return;
     }
@@ -1850,16 +2642,17 @@ class Juego {
     this.dom.prompt.classList.toggle("visible", !!obj);
 
     if (obj) {
-      this.dom.promptTxt.innerHTML = `Presiona <kbd>E</kbd> para escuchar esta huella`;
-      // Proyectar etiqueta sobre el orbe
-      const p = obj.grupo.position.clone().add(new THREE.Vector3(0, 0.95, 0)).project(this.camera);
+      const lugar = obj.datos.lugar || "Punto natural";
+      this.dom.promptTxt.innerHTML = `Presiona <kbd>E</kbd> para escuchar memoria · ${lugar}`;
+      // Proyectar etiqueta sobre el objeto de memoria
+      const p = obj.grupo.position.clone().add(new THREE.Vector3(0, (obj.baseY || 0.8) + 0.65, 0)).project(this.camera);
       if (p.z < 1) {
         const emo = CONFIG.emociones[obj.datos.emocion] || CONFIG.emociones.gratitud;
         this.dom.etiqOrbe.style.left = `${(p.x * 0.5 + 0.5) * innerWidth}px`;
         this.dom.etiqOrbe.style.top = `${(-p.y * 0.5 + 0.5) * innerHeight}px`;
         this.dom.eoEmo.textContent = `${emo.simbolo} ${emo.label}`;
         this.dom.eoEmo.style.color = emo.hex;
-        this.dom.eoTit.textContent = obj.datos.titulo;
+        this.dom.eoTit.textContent = `${lugar} — ${obj.datos.titulo}`;
         this.dom.eoMus.textContent = obj.datos.cancion || "";
         this.dom.etiqOrbe.classList.add("visible");
       } else {
@@ -1871,7 +2664,13 @@ class Juego {
   }
 
   _actualizarBrujula() {
-    if (!this.celularEntregado) { this.dom.brujulaMarcas.innerHTML = ""; return; }
+    const bruj = document.getElementById("brujula");
+    if (!this.celularEntregado) {
+      this.dom.brujulaMarcas.innerHTML = "";
+      if (bruj) bruj.style.opacity = "0";
+      return;
+    }
+    if (bruj) bruj.style.opacity = "1";
     const cont = this.dom.brujulaMarcas;
     cont.innerHTML = "";
 
